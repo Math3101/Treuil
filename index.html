@@ -121,7 +121,7 @@ label.chk input{width:22px;height:22px;flex:none}
 <body>
 <header>
   <img class="logo" src="logo-h.png" alt="GBMP Bâtiment" width="76" height="48">
-  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v22</span></span></div>
+  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v23</span></span></div>
   <div class="who" id="who"></div>
 </header>
 <nav role="tablist" id="tabs" hidden>
@@ -139,8 +139,8 @@ label.chk input{width:22px;height:22px;flex:none}
 <div class="toast" id="toast" role="status"></div>
 <script src="config.js"></script>
 <script src="lib/supabase.js"></script>
-<script src="data.js?v=22"></script>
-<script src="lib/planning.js?v=22"></script>
+<script src="data.js?v=23"></script>
+<script src="lib/planning.js?v=23"></script>
 <script>
 {
 /* ---------- Référentiel ---------- */
@@ -539,7 +539,7 @@ function renderSheet(){
  const id=S.open,z=Z[id],a=attrs(id),am=zoneAm(id),r=agg([id]);const adm=prof.role==='admin'&&S.canWrite;
  let h=`<header><div><b style="font-size:18px">${esc(z.name)}</b><br><span style="font-size:13px">${z.kind==='LOG'?`${z.info.typo} · ${niv(z.lvl)} · tour ${z.tower}`:'Partie commune'}</span></div><button class="x" id="xs" aria-label="Fermer">×</button></header>`;
  h+=`<section><div class="big">${pct(r.p)}</div><div class="mute">${r.nr} tâche(s) non relevée(s) sur ${r.n} · moyenne pondérée</div></section>`;
- if(am.st==='oui')h+=`<section><details class="amb"><summary><b style="display:inline">⚠ Amiante présent${z.kind==='LOG'&&z.info.anc?' (anciennes analyses)':''}</b>${z.kind==='LOG'?' · '+Object.keys(roomAm(id)).length+' pièce(s) '+['S','V','P'].filter(k=>Object.values(roomAm(id)).some(v=>v.k.has(k))).map(amBadge).join(' '):''}</summary>${z.kind==='LOG'?`<ul style="list-style:none;padding:0;margin:8px 0 0">${amGroups(id).map(g=>`<li style="margin:6px 0">${g.ks.map(amBadge).join(' ')} <b>${esc(g.rooms.join(', '))}</b><br><span style="font-size:13px">${g.mats.map(esc).join(' · ')}</span></li>`).join('')}</ul>`:`<ul>${am.mats.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`}</details></section>`;
+ if(am.st==='oui')h+=`<section><details class="amb"><summary><b style="display:inline">⚠ Présence d’amiante</b>${z.kind==='LOG'?' · '+Object.keys(roomAm(id)).length+' pièce(s) '+['S','V','P'].filter(k=>Object.values(roomAm(id)).some(v=>v.k.has(k))).map(amBadge).join(' '):''}</summary>${z.kind==='LOG'?`<ul style="list-style:none;padding:0;margin:8px 0 0">${amGroups(id).map(g=>`<li style="margin:6px 0">${g.ks.map(amBadge).join(' ')} <b>${esc(g.rooms.join(', '))}</b><br><span style="font-size:13px">${g.mats.map(esc).join(' · ')}</span></li>`).join('')}</ul>`:`<ul>${am.mats.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`}</details></section>`;
  else if(am.st==='verif')h+=`<section><div class="amb" style="background:#e6e6e6"><b>? Amiante à vérifier</b>Logement absent des rapports de repérage transmis.</div></section>`;
  if(z.kind==='LOG')h+=`<section><details><summary style="font-weight:700;min-height:32px">Informations du logement <span class="tw">· ${esc(a.men)} menuiseries · plomb ${{nr:'non renseigné',oui:'présent',non:'absent'}[a.plomb]||''}${a.sdb?' · réfection SdB':a.sdbConf==='renovee'?' · SdB déjà rénovée':''}</span></summary><div class="grid2" style="gap:10px;margin-top:8px"><label>Menuiseries<input type="number" min="1" max="12" id="aMen" value="${esc(a.men)}" ${adm?'':'disabled'}></label><label>Amiante<select class="f" id="aAm" ${adm?'':'disabled'}>${[['oui','Présent'],['non','Non trouvé'],['verif','À vérifier']].map(([k,l])=>`<option value="${k}" ${a.am===k?'selected':''}>${l}</option>`).join('')}</select></label><label>Plomb<select class="f" id="aPb" ${adm?'':'disabled'}>${[['nr','Non renseigné'],['oui','Présent'],['non','Absent']].map(([k,l])=>`<option value="${k}" ${a.plomb===k?'selected':''}>${l}</option>`).join('')}</select></label><label class="chk" style="align-self:end"><input type="checkbox" id="aSdb" ${a.sdb?'checked':''} ${adm?'':'disabled'}> Réfection de la salle de bain${a.sdbConf?`<br><span class="tw">Salle de bain ${esc(SDBST[a.sdbConf]||'')}${a.sdbEq?' · '+esc(a.sdbEq):''} · ${esc(a.sdbSrc||'')}</span>`:''}</label><label>État des lieux (lien)<input type="url" id="aEdl" placeholder="https://…" value="${esc(a.edl)}" ${adm?'':'disabled'}></label></div>${a.edl&&/^https:\/\//.test(a.edl)?`<p><a href="${esc(a.edl)}" target="_blank" rel="noopener">Ouvrir l’état des lieux</a></p>`:''}</details></section>`;
  h+='<section>';
