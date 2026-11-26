@@ -23,7 +23,7 @@ button,select,input,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:3px solid #2b6cff;outline-offset:2px}
 header{background:var(--red);color:#fff;padding:10px max(3vw,12px);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.logo{background:#fff;color:var(--red);font-weight:900;font-size:20px;letter-spacing:.5px;padding:4px 10px;border-radius:3px}
+.logo{height:48px;width:auto;display:block;margin:-4px 0}
 .brand b{display:block;font-size:19px;line-height:1.1}.brand span{font-size:13px;opacity:.9}
 .who{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}
 .who button{background:#fff;color:#111;border:0;border-radius:6px;padding:8px 12px;min-height:40px;font-weight:700}.ents{display:flex;flex-wrap:wrap;gap:6px}.dots{display:flex;gap:14px;justify-content:center;margin:8px 0}.pd{width:18px;height:18px;border-radius:50%;border:2px solid var(--ink);display:block}.pd.on{background:var(--ink)}.dots.bad .pd{border-color:#b3001b}.dots.bad{animation:sh .3s}@keyframes sh{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}@media(prefers-reduced-motion:reduce){.dots.bad{animation:none}}.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:300px;margin:0 auto}.key{min-height:64px;font-size:26px;font-weight:700;border:1px solid var(--line);border-radius:12px;background:var(--card)}.key:active{background:var(--line)}
@@ -111,7 +111,7 @@ label.chk input{width:22px;height:22px;flex:none}
 </head>
 <body>
 <header>
-  <div class="logo" aria-label="GBMP">GBMP</div>
+  <img class="logo" src="logo-h.png" alt="GBMP Bâtiment" width="76" height="48">
   <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux</span></div>
   <div class="who" id="who"></div>
 </header>
@@ -381,13 +381,13 @@ async function doExport(){
  const t=S.exT||S.tower,L=S.exLot||'';const lv=lvlList(t).filter(n=>S.exSel[t+n]);const msg=$('#exMsg');
  if(!lv.length){msg.textContent='Cochez au moins un niveau.';return}
  msg.textContent='Préparation du PDF…';
- try{const {jsPDF}=await loadJsPDF();const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});const today=new Date().toLocaleDateString('fr-FR');
+ try{const {jsPDF}=await loadJsPDF();let logo=null;try{const li=await loadImg('logo.png');const lc=document.createElement('canvas');lc.width=li.width;lc.height=li.height;lc.getContext('2d').drawImage(li,0,0);logo=lc.toDataURL('image/png')}catch(x){}const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});const today=new Date().toLocaleDateString('fr-FR');
   for(const [k,n] of lv.entries()){if(k)pdf.addPage();
    const im=await loadImg(`plans/${t}_${n===0?'rdc':'courant'}.png`);const c=document.createElement('canvas');c.width=1400;c.height=Math.round(1400*im.height/im.width);const g=c.getContext('2d');g.drawImage(im,0,0,c.width,c.height);
    const ids=zonesLvl(t,n).filter(id=>!L||TPL[Z[id].kind].some(x=>x.lot===L));
    for(const id of ids){const z=Z[id],r=agg([id],L),pts=ZP[z.poly];g.beginPath();pts.forEach((p,i)=>g[i?'lineTo':'moveTo'](p[0]*c.width,p[1]*c.height));g.closePath();g.globalAlpha=.5;g.fillStyle=hexOf(col(r.p,r.nr,r.n).trim()||'#c9ccd1');g.fill();g.globalAlpha=1;g.lineWidth=3;g.strokeStyle='#111';g.stroke();
     const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length*c.width,cy=pts.reduce((s,p)=>s+p[1],0)/pts.length*c.height;g.font='bold 34px Arial';g.textAlign='center';g.lineWidth=7;g.strokeStyle='#fff';const l1=z.kind==='LOG'?z.id:(z.kind==='HALL'?'Hall':'Palier'),l2=(r.nr===r.n?'—':pct(r.p))+(zoneAm(id).st==='oui'?' ⚠':'');g.strokeText(l1,cx,cy);g.fillStyle='#111';g.fillText(l1,cx,cy);g.font='bold 46px Arial';g.strokeText(l2,cx,cy+50);g.fillText(l2,cx,cy+50)}
-   pdf.setFillColor(231,29,51);pdf.rect(0,0,297,16,'F');pdf.setTextColor(255);pdf.setFont('helvetica','bold');pdf.setFontSize(14);pdf.text('GBMP · Résidence Le Treuil',8,10.5);pdf.setFontSize(11);pdf.text(`${L?'Lot '+L+' '+LOTS[L]+' · ':''}Tour ${t} · ${niv(n)} · avancement ${pct(agg(ids,L).p)} · ${today}`,289,10.5,{align:'right'});
+   pdf.setFillColor(231,29,51);pdf.rect(0,0,297,16,'F');if(logo)pdf.addImage(logo,'PNG',3,1,22,14);pdf.setTextColor(255);pdf.setFont('helvetica','bold');pdf.setFontSize(14);pdf.text('Résidence Le Treuil',logo?29:8,10.5);pdf.setFontSize(11);pdf.text(`${L?'Lot '+L+' '+LOTS[L]+' · ':''}Tour ${t} · ${niv(n)} · avancement ${pct(agg(ids,L).p)} · ${today}`,289,10.5,{align:'right'});
    const pw=160,ph=pw*c.height/c.width;pdf.addImage(c.toDataURL('image/jpeg',.82),'JPEG',6,20,pw,ph);
    pdf.setTextColor(20);let y=24;const X=172;
    for(const id of ids){const z=Z[id],r=agg([id],L);pdf.setFont('helvetica','bold');pdf.setFontSize(10);pdf.text(`${z.kind==='LOG'?z.id+' ('+z.info.typo+')':z.name.split(' tour')[0]} : ${pct(r.p)} · ${r.nr} non relevée(s)${zoneAm(id).st==='oui'?' · amiante':''}`,X,y);y+=5;pdf.setFont('helvetica','normal');pdf.setFontSize(8);
