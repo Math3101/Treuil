@@ -70,6 +70,7 @@ main{padding:14px max(3vw,12px) 80px;max-width:1300px;margin:0 auto}
 .amb{background:var(--warn);color:#111;border-radius:8px;padding:10px 12px;font-size:14px}
 .amb b{display:block}
 .amb ul{margin:4px 0 0;padding-left:18px}
+.ig{display:flex;justify-content:space-between;gap:8px;background:var(--ink);color:var(--bg);padding:8px 10px;border-radius:8px;margin:14px 0 6px;font-size:15px}.ig:first-child{margin-top:0}.eg{font-weight:700;font-size:14px;margin:8px 0 6px;padding-left:8px;border-left:4px solid var(--red)}
 .task{border:1px solid var(--line);border-radius:8px;margin-bottom:8px}
 .task>button{display:grid;grid-template-columns:44px minmax(0,1fr) 60px;gap:8px;align-items:center;width:100%;border:0;background:none;padding:10px;text-align:left;min-height:52px}
 .lot{font-size:12px;font-weight:700;background:var(--ink);color:var(--bg);border-radius:4px;padding:2px 4px;text-align:center}
@@ -206,7 +207,7 @@ async function loadAll(){
  try{
   const {data:pr,error:e1}=await sb.from('profiles').select('*').eq('id',S.session.user.id).maybeSingle();if(e1)throw e1;
   S.me=pr;setProf();if(!pr||pr.role==='attente'){render();return}
-  {const {data:ps}=await sb.from('profiles').select('id,nom,role,lots,actif').order('nom');S.ent=(ps||[]).filter(x=>x.nom&&x.actif&&(x.lots||[]).length)}
+  {const {data:ps}=await sb.from('profiles').select('id,nom,role,lots,taches,actif').order('nom');S.ent=(ps||[]).filter(x=>x.nom&&x.actif&&((x.lots||[]).length||(x.taches||[]).length))}
   const [za,cf]=await Promise.all([sb.from('zone_attrs').select('*'),sb.from('config').select('data').eq('id',1).maybeSingle()]);
   if(za.error)throw za.error;
   let rows=[];for(let from=0;;from+=1000){const {data,error}=await sb.from('releves').select('*').order('at',{ascending:true}).order('id',{ascending:true}).range(from,from+999);if(error)throw error;rows=rows.concat(data);if(data.length<1000)break}
@@ -365,6 +366,16 @@ function vReg(){
 /* ---------- Fiche ---------- */
 function openZone(id){S.sel=id;S.open=id;S.edit=null;S.draft=null;$('#sheet').classList.add('open');render();const h=(doc(id).h||[]).map(x=>x.by);names(h)}
 function closeSheet(){S.open=null;S.sel=null;$('#sheet').classList.remove('open');render()}
+const INTER=[{n:'Menuiseries extérieures et porte palière',t:['L1','L11']},{n:'Électricité',t:['L7','L8']},{n:'MTA, chauffage, ventilation et robinetterie',t:['L2','L3','L4','L9','L5']},{n:'Réfection de la salle de bain',t:['SB8','SB1','SB3','SB2','SB4','SB5','SB6','SB7']},{n:'Finitions et réception',t:['L10','L12','L13']}];
+function entOfTask(t){const byT=(S.ent||[]).filter(e=>(e.taches||[]).includes(t.id));if(byT.length)return byT.map(e=>e.nom).join(', ');const byL=(S.ent||[]).filter(e=>(e.lots||[]).includes(t.lot));return byL.length?byL.map(e=>e.nom).join(', '):'Lot '+t.lot+' · entreprise non attribuée'}
+function aggT(id,ts){let W=0,P=0,n=0,nr=0;for(const t of ts){const r=taskPct(id,t);if(!r)continue;W+=t.w;P+=t.w*r.p;n++;if(r.nr)nr++}return{p:W?P/W:0,n,nr}}
+function groupedTasks(id,z,a){const all=TPL[z.kind].filter(t=>!(isSdb(t)&&!a.sdb&&!(doc(id).t||{})[t.id]));const out=[];
+ const groups=z.kind==='LOG'?INTER.map(g=>({n:g.n,ts:g.t.map(k=>all.find(t=>t.id===k)).filter(Boolean)})):[{n:null,ts:all}];
+ const used=new Set(groups.flatMap(g=>g.ts.map(t=>t.id)));const rest=all.filter(t=>!used.has(t.id));if(rest.length)groups.push({n:'Autres tâches',ts:rest});
+ for(const g of groups){if(!g.ts.length)continue;if(g.n){const r=aggT(id,g.ts);out.push({h:`<div class="ig"><b>${esc(g.n)}</b><span>${r.n&&r.nr===r.n?'non relevé':pct(r.p)}</span></div>`})}
+  const byE=new Map();for(const t of g.ts){const e=entOfTask(t);if(!byE.has(e))byE.set(e,[]);byE.get(e).push(t)}
+  for(const [e,ts] of byE){const r=aggT(id,ts);out.push({h:`<div class="eg">${esc(e)} <span class="tw">· ${r.n&&r.nr===r.n?'non relevé':pct(r.p)}</span></div>`});for(const t of ts)out.push({t})}}
+ return out}
 function renderSheet(){
  const id=S.open,z=Z[id],a=attrs(id),am=zoneAm(id),r=agg([id]);const adm=prof.role==='admin'&&S.canWrite;
  let h=`<header><div><b style="font-size:18px">${esc(z.name)}</b><br><span style="font-size:13px">${z.kind==='LOG'?`${z.info.typo} · ${niv(z.lvl)} · tour ${z.tower}`:'Partie commune'}</span></div><button class="x" id="xs" aria-label="Fermer">×</button></header>`;
@@ -372,8 +383,8 @@ function renderSheet(){
  if(am.st==='oui')h+=`<section><div class="amb"><b>⚠ Amiante présent${z.kind==='LOG'&&z.info.anc?' (anciennes analyses)':''}</b>${z.kind==='LOG'?`<ul style="list-style:none;padding:0">${Object.entries(roomAm(id)).sort().map(([room,v])=>`<li style="margin:4px 0"><b>${esc(room)}</b> ${['S','V','P'].filter(k=>v.k.has(k)).map(amBadge).join(' ')}<br><span style="font-size:13px">${[...new Set(v.mats)].map(esc).join(' · ')}</span></li>`).join('')}</ul>`:`<ul>${am.mats.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>`}</div></section>`;
  else if(am.st==='verif')h+=`<section><div class="amb" style="background:#e6e6e6"><b>? Amiante à vérifier</b>Logement absent des rapports de repérage transmis.</div></section>`;
  if(z.kind==='LOG')h+=`<section><div class="grid2" style="gap:10px"><label>Menuiseries<input type="number" min="1" max="12" id="aMen" value="${esc(a.men)}" ${adm?'':'disabled'}></label><label>Amiante<select class="f" id="aAm" ${adm?'':'disabled'}>${[['oui','Présent'],['non','Non trouvé'],['verif','À vérifier']].map(([k,l])=>`<option value="${k}" ${a.am===k?'selected':''}>${l}</option>`).join('')}</select></label><label>Plomb<select class="f" id="aPb" ${adm?'':'disabled'}>${[['nr','Non renseigné'],['oui','Présent'],['non','Absent']].map(([k,l])=>`<option value="${k}" ${a.plomb===k?'selected':''}>${l}</option>`).join('')}</select></label><label class="chk" style="align-self:end"><input type="checkbox" id="aSdb" ${a.sdb?'checked':''} ${adm?'':'disabled'}> Réfection de la salle de bain${a.sdbConf?`<br><span class="tw">Salle de bain ${esc(SDBST[a.sdbConf]||'')}${a.sdbEq?' · '+esc(a.sdbEq):''} · ${esc(a.sdbSrc||'')}</span>`:''}</label><label>État des lieux (lien)<input type="url" id="aEdl" placeholder="https://…" value="${esc(a.edl)}" ${adm?'':'disabled'}></label></div>${a.edl&&/^https:\/\//.test(a.edl)?`<p><a href="${esc(a.edl)}" target="_blank" rel="noopener">Ouvrir l’état des lieux</a></p>`:''}</section>`;
- h+='<section><h3>Tâches</h3>';
- for(const t of TPL[z.kind]){if(isSdb(t)&&!a.sdb&&!(doc(id).t||{})[t.id])continue;if(t.id==='SB8')h+='<h3 style="margin:12px 0 6px">Réfection de la salle de bain</h3>';const s=taskState(id,t),tp=taskPct(id,t);const amT=am.st==='oui'&&t.am.some(c=>am.cats.includes(c));const ed=canEditTask(t);
+ h+='<section>';
+ for(const it of groupedTasks(id,z,a)){if(it.h){h+=it.h;continue}const t=it.t;const s=taskState(id,t),tp=taskPct(id,t);const amT=am.st==='oui'&&t.am.some(c=>am.cats.includes(c));const ed=canEditTask(t);
   const stt=s.st==='so'?'<span class="st nr">sans objet</span>':s.st==='nr'?'<span class="st nr">non relevé</span>':`<span class="st">${t.mode==='count'?esc(s.v)+'/'+esc(a.men):t.mode==='bin'?(s.v?'fait':'0 %'):esc(s.v)+' %'}</span>`;
   h+=`<div class="task"><button data-task="${t.id}" aria-expanded="${S.edit===t.id}"><span class="lot">${t.lot}</span><span>${amT?'⚠ ':''}${esc(t.label)}<br><span class="tw">poids ${String(t.w).replace('.',',')}${s.at?' · '+fmtD(s.at)+' · '+esc(who(s)):''}</span></span>${stt}</button>`;
   if(S.edit===t.id){const d=S.draft;h+=`<div class="ed">${amT?`<div class="amw"><b>Zone amiantée :</b> ${esc(am.cats.map(c=>AMC[c]).join(', '))}. Mode opératoire validé AMO / SPS obligatoire.</div>`:''}${s.c?`<div class="mute">Dernière remarque : ${esc(s.c)}</div>`:''}`;

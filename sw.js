@@ -1,5 +1,5 @@
 // Cache de l'application (pas des données) : ouverture rapide et plans disponibles hors réseau.
-const V = 'treuil-v8';
+const V = 'treuil-v9';
 const SHELL = ['./', './index.html', './config.js', './data.js', './lib/supabase.js', './lib/jspdf.umd.min.js',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './logo.png', './logo-h.png',
   ...['A','B','C','D'].flatMap(t => [`./plans/${t}_rdc.png`, `./plans/${t}_courant.png`])];
