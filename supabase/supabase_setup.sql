@@ -96,7 +96,7 @@ insert into public.task_lots (task_id, lot) values
  ('T1','04'),('T2','13A'),
  ('F1','05'),('F2','06'),('F3','01'),('F4','13A'),('F5','05'),('F6','05'),
  ('X1','15'),('X2','16'),('X3','01'),
- ('SB1','10'),('SB2','11'),('SB3','10'),('SB4','13B'),('SB5','13B'),('SB6','13B'),('SB7','13B')
+ ('SB1','10'),('SB2','11'),('SB3','10'),('SB4','13B'),('SB5','13B'),('SB6','13B'),('SB7','13B'),('SB8','09')
 on conflict (task_id) do update set lot = excluded.lot;
 
 -- ---------- Fonctions d'aide (droits) ----------
@@ -361,5 +361,5 @@ do $$ begin
   end if;
 end $$;
 
--- Vérification : 50 tâches et au moins 1 entreprise.
+-- Vérification : 51 tâches et au moins 1 entreprise.
 select (select count(*) from public.task_lots) as nb_taches, (select count(*) from public.list_entreprises()) as nb_entreprises;
