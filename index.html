@@ -128,7 +128,7 @@ label.chk input{width:22px;height:22px;flex:none}
 <body>
 <header>
   <img class="logo" src="logo-h.png" alt="GBMP Bâtiment" width="76" height="48">
-  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v28</span></span></div>
+  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v29</span></span></div>
   <div class="who" id="who"></div>
 </header>
 <nav role="tablist" id="tabs" hidden>
@@ -146,8 +146,8 @@ label.chk input{width:22px;height:22px;flex:none}
 <div class="toast" id="toast" role="status"></div>
 <script src="config.js"></script>
 <script src="lib/supabase.js"></script>
-<script src="data.js?v=28"></script>
-<script src="lib/planning.js?v=28"></script>
+<script src="data.js?v=29"></script>
+<script src="lib/planning.js?v=29"></script>
 <script>
 {
 /* ---------- Référentiel ---------- */
@@ -322,7 +322,9 @@ function vPlanningOld(){
  else{const L=P.L[ph+'|'+t];if(!L)body='<p class="mute">Pas de tâche pour cette tour dans le planning.</p>';else{
   const warn=L.qte&&L.qte!==L.list.length?`<div class="amw">Le planning prévoit ${L.qte} logements pour cette tour ; ${L.list.length} sont concernés dans l’outil${ph==='P2'?' (logements avec réfection de salle de bain)':''}.</div>`:'';
   body=`<p class="mute">Tour ${t} · ${esc(L.main.label)} · prévu du <b>${fdl({d:L.tower.s})}</b> au <b>${fdl({d:L.tower.e})}</b> · cadence ${String(Math.round(L.cad*10)/10).replace('.',',')} j.o. par logement · dernier logement fini le <b>${L.list.length?fdl(L.list[L.list.length-1].e):'—'}</b></p>${warn}
-  ${adm?`<p class="note">Ordre de passage : ↑ ↓ pour déplacer un logement, ⇅ sur deux logements pour les inverser. Les dates se recalculent aussitôt.</p>`:''}
+  ${adm?`<p class="note">Ordre de passage : tapez l’ordre voulu ci-dessous, ou utilisez ↑ ↓ pour déplacer un logement et ⇅ sur deux logements pour les inverser. Les dates se recalculent aussitôt.</p>
+  <div class="bar"><input type="text" id="ordTxt" placeholder="ex. D01, D03, D04, D02" style="max-width:360px"><label class="chk"><input type="checkbox" id="ordAll"> pour toutes les interventions de la tour</label><button class="btn pri" id="ordGo">Appliquer cet ordre</button></div>
+  <p class="note">Seuls les logements tapés changent de place, entre eux ; les autres gardent la leur. Exemple : « D01, D03, D04, D02 » fait passer D03 et D04 avant D02.</p>`:''}
   <div class="scroll"><table class="pl"><thead><tr><th>#</th><th>Logement</th><th>Niveau</th><th>Début</th><th>Fin</th><th>Entreprises</th><th>État</th>${adm?'<th></th>':''}</tr></thead><tbody>${L.list.map((x,k)=>{const s=planState(x.id,ph,x);return `<tr class="${S.swap===x.id?'swsel':''}"><td>${k+1}</td><td><a href="#planning" data-z="${x.id}">${x.id}</a></td><td>${niv(Z[x.id].lvl)}</td><td>${fdl(x.s)}</td><td>${fdl(x.e)}</td><td class="tw">${x.steps.map(st=>`${esc(st.ent)} ${fd(st.s)}→${fd(st.e)}`).join('<br>')}</td><td><span class="pd2" style="background:${s.c}"></span>${esc(s.l)}</td>${adm?`<td style="white-space:nowrap"><button class="btn" data-pmv="${x.id}|-1" aria-label="Monter">↑</button><button class="btn" data-pmv="${x.id}|1" aria-label="Descendre">↓</button><button class="btn ${S.swap===x.id?'on':''}" data-psw="${x.id}" aria-label="Inverser">⇅</button></td>`:''}</tr>`}).join('')}</tbody></table></div>
   ${adm&&c.order[ph+'|'+t]?`<button class="btn" id="pordR" style="margin-top:8px">Revenir à l’ordre par numéro</button>`:''}`}}
  return `<div class="card">${head}${legend}${body}</div>`;
@@ -663,10 +665,14 @@ document.addEventListener('click',async e=>{
  if(b.dataset.amt!==undefined){S.amT=b.dataset.amt;render();return}
  if(b.dataset.plw!==undefined){const d=+b.dataset.plw;if(d===0){S.plW0=null}else{S.plW0=(S.plW0||0)+d*7*(S.plNW||3)}render();return}
  if(b.dataset.plv!==undefined){S.plV=b.dataset.plv;render();return}
- if(b.dataset.plm!==undefined){S.plMode=b.dataset.plm;render();return}
+ if(b.dataset.plm!==undefined){S.plMode=b.dataset.plm;if(S.plMode==='ordre'&&!S.plP)S.plP='P1';render();return}
  if(b.dataset.plp!==undefined){S.plP=b.dataset.plp;S.swap=null;render();return}
  if(b.dataset.pmv){const [id,d]=b.dataset.pmv.split('|');const ph=S.plP,t=S.plT||'D';const ids=planIds(ph,t);const i=ids.indexOf(id),j=i+(+d);if(j<0||j>=ids.length)return;[ids[i],ids[j]]=[ids[j],ids[i]];await savePlan({order:{...planCfg().order,[ph+'|'+t]:ids}});return}
  if(b.dataset.psw){const id=b.dataset.psw;if(!S.swap||S.swap===id){S.swap=S.swap===id?null:id;render();return}const ph=S.plP,t=S.plT||'D';const ids=planIds(ph,t);const i=ids.indexOf(S.swap),j=ids.indexOf(id);S.swap=null;if(i<0||j<0){render();return}[ids[i],ids[j]]=[ids[j],ids[i]];await savePlan({order:{...planCfg().order,[ph+'|'+t]:ids}});toast('Logements inversés.');return}
+ if(b.id==='ordGo'){const t=S.plT||'D',ph=S.plP;const want=[...new Set(($('#ordTxt').value.toUpperCase().match(/[ABCD]\s*-?\s*\d{1,2}/g)||[]).map(x=>{const m=x.match(/([ABCD])\s*-?\s*(\d{1,2})/);return m[1]+m[2].padStart(2,'0')}))];
+  if(want.length<2){toast('Tapez au moins deux logements, ex. D01, D03, D04, D02.');return}const bad=want.filter(id=>!Z[id]||Z[id].tower!==t);if(bad.length){toast('Hors de la tour '+t+' : '+bad.join(', '));return}
+  const order={...planCfg().order};let n=0;for(const p of ($('#ordAll').checked?PH:[ph])){const ids=planIds(p,t);const L=want.filter(id=>ids.includes(id));if(L.length<2)continue;const pos=L.map(id=>ids.indexOf(id)).sort((a,b)=>a-b);const nw=ids.slice();pos.forEach((q,i)=>nw[q]=L[i]);order[p+'|'+t]=nw;n++}
+  if(!n){toast('Ces logements ne sont pas concernés par cette intervention.');return}if(await savePlan({order}))toast('Ordre appliqué'+(n>1?' à '+n+' interventions':'')+'.');return}
  if(b.id==='pordR'){const o={...planCfg().order};delete o[S.plP+'|'+(S.plT||'D')];await savePlan({order:o});return}
  if(b.dataset.poff){const [d,f,e,ty]=b.dataset.poff.split('|');await savePlan({off:planCfg().off.filter(o=>!(o.d===d&&(o.f||'')===f&&(o.ent||'')===e&&o.type===ty))});return}
  if(b.dataset.tmv){const [i,d]=b.dataset.tmv.split('|').map(Number);const a=S.te.inter;if(a[i+d]){[a[i],a[i+d]]=[a[i+d],a[i]]}render();return}
