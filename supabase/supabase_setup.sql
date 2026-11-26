@@ -1,6 +1,6 @@
 -- =====================================================================
 -- Suivi d'avancement · Résidence Le Treuil · GBMP
--- Script de mise en place Supabase · version 3 (entreprise + code, droits par tâche, salle de bain)
+-- Script de mise en place Supabase · version 4 (entreprise + code, droits par tâche, salle de bain, affichage des codes)
 -- À coller dans SQL Editor puis Run. Peut être relancé sans risque :
 -- il ne supprime aucun relevé.
 -- AVANT DE LANCER : remplacez 1234 par votre code administrateur à 4 chiffres
@@ -30,6 +30,8 @@ create table if not exists public.entreprise_secrets (
   failed int not null default 0,
   locked_until timestamptz
 );
+-- Copie lisible du code, consultable uniquement par l'administrateur (fonction admin_get_code)
+alter table public.entreprise_secrets add column if not exists code_clair text;
 
 -- Journal d'activité (connexions, échecs, relevés, fiches)
 create table if not exists public.journal (
@@ -234,7 +236,7 @@ begin
   insert into auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
   values (gen_random_uuid(), uid, jsonb_build_object('sub', uid::text, 'email', em, 'email_verified', true), 'email', uid::text, now(), now(), now());
   insert into public.profiles (id, email, nom, role, lots, taches) values (uid, em, trim(p_nom), p_role, coalesce(p_lots, '{}'), coalesce(p_taches, '{}'));
-  insert into public.entreprise_secrets (id, code_hash, secret) values (uid, extensions.crypt(p_pin, extensions.gen_salt('bf')), sec);
+  insert into public.entreprise_secrets (id, code_hash, secret, code_clair) values (uid, extensions.crypt(p_pin, extensions.gen_salt('bf')), sec, p_pin);
   insert into public.journal (profile_id, nom, action, detail) values (auth.uid(), (select nom from public.profiles where id = auth.uid()), 'création entreprise', trim(p_nom));
   return uid;
 end $$;
@@ -244,7 +246,7 @@ language plpgsql security definer set search_path = public, extensions as
 $$ begin
   perform public.assert_admin();
   perform public.check_pin(p_pin, p_id);
-  update public.entreprise_secrets set code_hash = extensions.crypt(p_pin, extensions.gen_salt('bf')), failed = 0, locked_until = null where id = p_id;
+  update public.entreprise_secrets set code_hash = extensions.crypt(p_pin, extensions.gen_salt('bf')), code_clair = p_pin, failed = 0, locked_until = null where id = p_id;
   if not found then raise exception 'Entreprise inconnue.'; end if;
   insert into public.journal (profile_id, nom, action, detail) values (auth.uid(), (select nom from public.profiles where id = auth.uid()), 'changement de code', (select nom from public.profiles where id = p_id));
 end $$;
@@ -261,6 +263,15 @@ $$ begin
     begin delete from auth.sessions where user_id = p_id; exception when others then null; end;
   end if;
   insert into public.journal (profile_id, nom, action, detail) values (auth.uid(), (select nom from public.profiles where id = auth.uid()), 'modification entreprise', trim(p_nom));
+end $$;
+
+create or replace function public.admin_get_code(p_id uuid) returns text
+language plpgsql security definer set search_path = public as
+$$ declare c text; begin
+  perform public.assert_admin();
+  select code_clair into c from public.entreprise_secrets where id = p_id;
+  insert into public.journal (profile_id, nom, action, detail) values (auth.uid(), (select nom from public.profiles where id = auth.uid()), 'code affiché', (select nom from public.profiles where id = p_id));
+  return c;
 end $$;
 
 -- ---------- Activité (administrateur) ----------
@@ -291,7 +302,7 @@ grant execute on function public.list_entreprises() to anon, authenticated;
 grant execute on function public.pin_login(uuid, text) to anon, authenticated;
 do $g$ declare f text; begin
   foreach f in array array['public.admin_create_entreprise(text,text,text,text[],text[])','public.admin_set_pin(uuid,text)',
-    'public.admin_update_entreprise(uuid,text,text,text[],boolean,text[])','public.admin_activite()','public.assert_admin()','public.check_pin(text,uuid)'] loop
+    'public.admin_update_entreprise(uuid,text,text,text[],boolean,text[])','public.admin_activite()','public.admin_get_code(uuid)','public.assert_admin()','public.check_pin(text,uuid)'] loop
     execute 'revoke all on function ' || f || ' from public, anon';
     execute 'grant execute on function ' || f || ' to authenticated';
   end loop;
