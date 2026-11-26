@@ -128,7 +128,7 @@ label.chk input{width:22px;height:22px;flex:none}
 <body>
 <header>
   <img class="logo" src="logo-h.png" alt="GBMP Bâtiment" width="76" height="48">
-  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v29</span></span></div>
+  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v30</span></span></div>
   <div class="who" id="who"></div>
 </header>
 <nav role="tablist" id="tabs" hidden>
@@ -146,8 +146,8 @@ label.chk input{width:22px;height:22px;flex:none}
 <div class="toast" id="toast" role="status"></div>
 <script src="config.js"></script>
 <script src="lib/supabase.js"></script>
-<script src="data.js?v=29"></script>
-<script src="lib/planning.js?v=29"></script>
+<script src="data.js?v=30"></script>
+<script src="lib/planning.js?v=30"></script>
 <script>
 {
 /* ---------- Référentiel ---------- */
@@ -345,7 +345,7 @@ function vPlanGantt(){
  const P=planComp();const phs=S.plP?[S.plP]:PH;const T=todayIso(),c=planCfg();
  const DW=innerWidth<600?14:20,RH=24,LW=innerWidth<600?64:92;
  // logements : tours dans l'ordre du planning, puis ordre de passage
- const tows=['D','C','B','A'];const rows=[];for(const t of tows){const ord=S.plP?planIds(S.plP,t):planIds('P1',t);const ids=ord.filter(id=>phs.some(ph=>(P.byLog[id]||{})[ph]));if(ids.length)rows.push({t,ids})}
+ const tows=['D','C','B','A'];const rows=[];for(const t of tows){const ord=Object.values(Z).filter(z=>z.kind==='LOG'&&z.tower===t).map(z=>z.id).sort();const ids=ord.filter(id=>phs.some(ph=>(P.byLog[id]||{})[ph]));if(ids.length)rows.push({t,ids})}
  const all=[];for(const id in P.byLog)for(const ph of phs){const x=P.byLog[id][ph];if(x)for(const st of x.steps){all.push(st.s.d,st.e.d)}}if(!all.length)return '<p class="mute">Aucune intervention.</p>';all.sort();
  const first=Math.min(TP.isoToNum(monday(all[0])),TP.isoToNum('2026-11-23')),last=TP.isoToNum(all[all.length-1]);const cols=[],ci=new Map();for(let n=first;n<=last;n++){const wd=new Date(n*86400000).getUTCDay();if(wd===0||wd===6)continue;ci.set(n,cols.length);cols.push(n)}
  const W=cols.length*DW;
@@ -364,7 +364,7 @@ function vPlanGantt(){
  return `<div class="bar"><button class="btn" id="plToday">Aller à aujourd’hui</button><div class="legend" style="margin:0">${ents.map(e=>`<span><i style="background:${entC(e)}"></i>${esc(e)}</span>`).join('')}<span><i style="background:#fff;outline:2px solid #d6331f"></i>en retard</span><span><i style="background:#999;opacity:.45"></i>terminé</span></div></div>
  <div class="gantt" id="gtScroll" style="--lw:${LW}px"><div class="gcorner">Logement</div><div class="ghead" style="width:${W}px"><div class="gwr">${wkH}</div><div class="gdr">${dyH}</div></div>
  <div class="gleft">${left}</div><div class="gbody" style="width:${W}px">${bg}${body}</div></div>
- <p class="note">Une ligne par logement, dans l’ordre de passage : les barres forment l’escalier de chaque intervention. Barre fine : plusieurs entreprises dans le même logement (salle de bain). Touchez une barre ou un numéro pour ouvrir la fiche.</p>`;
+ <p class="note">Une ligne par logement, dans l’ordre des numéros : les barres forment l’escalier de chaque intervention ; un logement déplacé dans l’ordre de passage apparaît en décalé. Barre fine : plusieurs entreprises dans le même logement (salle de bain). Touchez une barre ou un numéro pour ouvrir la fiche.</p>`;
 }
 function planScrollToday(){const sc=$('#gtScroll');if(!sc)return;const t=sc.querySelector('.gtoday');if(sc.classList.contains('gantt')){const dd=[...sc.querySelectorAll('.gdd')];const T=todayIso();const mon=monday(T);const cw=sc.querySelector('.gw.cur');let x=cw?parseFloat(cw.style.left):(t?parseFloat(t.style.left)-60:0);if(!t){const k=dd.findIndex(e=>e.title&&false);x=0}sc.scrollLeft=Math.max(0,x);S.plSL=sc.scrollLeft;return}const T=todayIso();const ths=[...sc.querySelectorAll('th[data-d]')];const th=ths.find(x=>x.dataset.d>=monday(T))||ths[0];const c0=sc.querySelector('.gc0');if(th)sc.scrollLeft=Math.max(0,th.offsetLeft-(c0?c0.offsetWidth:0));S.plSL=sc.scrollLeft}
 function vPlanGrid(){
