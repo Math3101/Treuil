@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suivi Le Treuil</title>
+<meta name="theme-color" content="#E71D33">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+/* VOICE: outil de chantier, net et direct, lisible en plein jour sur un téléphone
+   IDEA: le plan de l'étage affiché au bureau de chantier, colorié au feutre selon l'avancement
+   PICTURE: le plan de la tour lui-même, zones colorées par avancement, numéro et % sur chaque logement
+   COLOUR and TYPE: rouge GBMP #E71D33 en bandeau, blanc, noir ; échelle d'avancement orange → vert ; Arial/Helvetica
+   LAYOUT: bandeau rouge, onglets, plan en tête ; fiche logement en panneau latéral (bas d'écran sur mobile) */
+:root{color-scheme:light dark;--red:#E71D33;--bg:light-dark(#f4f4f2,#141414);--card:light-dark(#fff,#1f1f1f);--ink:light-dark(#141414,#f1f1f1);--mute:light-dark(#62656b,#a5a8ad);--line:light-dark(#dcdcd8,#353535);--nr:light-dark(#c9ccd1,#4a4d52);--warn:#ffcf33}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 Arial,Helvetica,sans-serif;overflow-x:clip}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid #2b6cff;outline-offset:2px}
+header{background:var(--red);color:#fff;padding:10px max(3vw,12px);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.logo{background:#fff;color:var(--red);font-weight:900;font-size:20px;letter-spacing:.5px;padding:4px 10px;border-radius:3px}
+.brand b{display:block;font-size:19px;line-height:1.1}.brand span{font-size:13px;opacity:.9}
+.who{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}
+.who button{background:#fff;color:#111;border:0;border-radius:6px;padding:8px 12px;min-height:40px;font-weight:700}.login{max-width:420px;margin:30px auto;display:grid;gap:12px}.login input{width:100%;border:1px solid var(--line);border-radius:8px;padding:12px;font-size:16px;background:var(--bg)}.err{color:#b3001b;font-size:14px}
+.who select{background:#fff;color:#111;border:0;border-radius:6px;padding:8px;min-height:40px;max-width:230px}
+nav{display:flex;gap:2px;overflow-x:auto;background:var(--card);border-bottom:1px solid var(--line);padding:0 max(3vw,12px)}
+nav button{flex:none;border:0;background:none;padding:13px 14px;font-weight:700;color:var(--mute);border-bottom:3px solid transparent;white-space:nowrap;min-height:46px}
+nav button[aria-selected=true]{color:var(--ink);border-color:var(--red)}
+main{padding:14px max(3vw,12px) 80px;max-width:1300px;margin:0 auto}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:7px 13px;min-height:40px;font-weight:700}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip.am[aria-pressed=true]{background:var(--warn);color:#111;border-color:#c99a00}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px}
+@media(max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}}
+.plan{position:relative;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:auto;touch-action:pan-x pan-y pinch-zoom}
+.plan .inner{position:relative;width:100%}
+.plan.zoom .inner{width:220%}
+.plan img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
+.plan svg{position:absolute;inset:0;width:100%;height:100%}
+.plan polygon{stroke:#111;stroke-width:.0025;cursor:pointer;fill-opacity:.55;vector-effect:none}
+.plan polygon:hover,.plan polygon.sel{fill-opacity:.8;stroke-width:.005}
+.plan polygon.dim{fill-opacity:.12}
+.plan text{font:700 .028px Arial;pointer-events:none;text-anchor:middle;paint-order:stroke;stroke:#fff;stroke-width:.006}
+.plan text.pc{font-size:.04px}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:13px;color:var(--mute);margin-top:8px}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid #0003}
+.big{font-size:clamp(34px,6vw,52px);font-weight:900;line-height:1}
+.mute{color:var(--mute);font-size:13px}
+.meter{height:10px;background:var(--nr);border-radius:5px;overflow:hidden}
+.meter>i{display:block;height:100%}
+.rows{display:grid;gap:6px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 120px 52px;gap:10px;align-items:center;font-size:14px}
+.row b{font-variant-numeric:tabular-nums;text-align:right}
+.tz{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.sheet{position:fixed;top:0;right:0;bottom:0;width:min(480px,100%);background:var(--card);box-shadow:-8px 0 30px #0004;z-index:20;overflow-y:auto;transform:translateX(105%);transition:transform .2s}
+.sheet.open{transform:none}
+@media(prefers-reduced-motion:reduce){.sheet{transition:none}}
+.sheet header{position:sticky;top:0;z-index:2}
+.sheet .x{margin-left:auto;background:#fff;color:#111;border:0;border-radius:50%;width:40px;height:40px;font-size:22px;line-height:1}
+.sheet section{padding:12px 16px;border-bottom:1px solid var(--line)}
+.amb{background:var(--warn);color:#111;border-radius:8px;padding:10px 12px;font-size:14px}
+.amb b{display:block}
+.amb ul{margin:4px 0 0;padding-left:18px}
+.task{border:1px solid var(--line);border-radius:8px;margin-bottom:8px}
+.task>button{display:grid;grid-template-columns:44px minmax(0,1fr) 60px;gap:8px;align-items:center;width:100%;border:0;background:none;padding:10px;text-align:left;min-height:52px}
+.lot{font-size:12px;font-weight:700;background:var(--ink);color:var(--bg);border-radius:4px;padding:2px 4px;text-align:center}
+.st{font-weight:700;text-align:right;font-variant-numeric:tabular-nums;font-size:14px}
+.st.nr{color:var(--mute);font-weight:400;font-size:12px}
+.tw{font-size:12px;color:var(--mute)}
+.ed{padding:0 10px 12px;display:grid;gap:10px}
+.ed input[type=range]{width:100%;height:36px}
+.btns{display:flex;flex-wrap:wrap;gap:6px}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:8px 12px;min-height:44px;font-weight:700}
+.btn.on{background:var(--ink);color:var(--bg)}
+.btn.pri{background:var(--red);color:#fff;border-color:var(--red)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+textarea,input[type=text],input[type=url],input[type=number],select.f{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--bg);font-size:16px}
+textarea{min-height:70px}
+.ph{display:flex;gap:6px;flex-wrap:wrap}.ph img{width:76px;height:76px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+.amw{background:#fff4c2;color:#111;border-left:5px solid #c99a00;padding:8px 10px;font-size:13px;border-radius:4px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dot{display:inline-block;width:16px;height:16px;border-radius:50%;border:1px solid #0004;vertical-align:-3px}.dot.so{background:transparent;border:2px dashed var(--mute)}
+.lt td,.lt th{padding:5px 6px;white-space:nowrap}.lt td:first-child,.lt th:first-child{position:sticky;left:0;background:var(--card);z-index:1}.lt tr.tot td:first-child{background:var(--bg)}.lt .c{text-align:center}.lt .c .tw{display:block}.lt tr.tot td{background:var(--bg);border-top:2px solid var(--ink)}
+.heat td{text-align:center;font-weight:700;color:#111;border:2px solid var(--card)}
+.scroll{overflow-x:auto}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.kpi div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+.kpi b{display:block;font-size:28px;line-height:1.1}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:8px;z-index:40;font-size:14px;display:none;max-width:90vw}
+.note{font-size:13px;color:var(--mute);margin-top:6px}
+h2{font-size:20px;margin:0 0 10px}h3{font-size:16px;margin:0 0 8px}
+.hist{display:grid;gap:8px}
+.hist .card{padding:10px 12px;font-size:14px}
+label.chk{display:flex;gap:8px;align-items:flex-start;font-size:14px}
+label.chk input{width:22px;height:22px;flex:none}
+@media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:8px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;color:var(--mute)}.stack td:empty{display:none}.brand b{font-size:16px}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<header>
+  <div class="logo" aria-label="GBMP">GBMP</div>
+  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux</span></div>
+  <div class="who" id="who"></div>
+</header>
+<nav role="tablist" id="tabs" hidden>
+  <button role="tab" data-v="plan" aria-selected="true">Plan</button>
+  <button role="tab" data-v="synth">Synthèse</button>
+  <button role="tab" data-v="amiante">Amiante</button>
+  <button role="tab" data-v="hist">Historique</button>
+  <button role="tab" data-v="export">Export PDF</button>
+  <button role="tab" data-v="reglages">Réglages</button>
+</nav>
+<main id="main"><p class="mute">Chargement…</p></main>
+<aside class="sheet" id="sheet" aria-label="Fiche de la zone"></aside>
+<div class="toast" id="toast" role="status"></div>
+<script src="config.js"></script>
+<script src="lib/supabase.js"></script>
+<script src="data.js"></script>
+<script>
+{
+/* ---------- Référentiel ---------- */
+const LOTS={'01':'Démolition / Gros œuvre','02':'Charpente métallique','04':'Étanchéité','05':'ITE / Bardage / Échafaudage','06':'Menuiseries ext. alu','08':'Menuiseries int. bois','09':'Plâtrerie / Faux plafonds','10':'Sols','11':'Peinture','12':'Électricité','13A':'Chauffage / Ventilation','13B':'Plomberie','14':'Ascenseurs','15':'VRD','16':'Paysage','GBMP':'Réception GBMP'};
+const LOTK=['01','02','04','05','06','08','09','10','11','12','13A','13B','14','15','16','GBMP'];
+const AMC={sols:'Sols (dalles, lino, colles, ragréage)',murs:'Enduits plâtre murs / allèges',plafond:'Enduits plâtre plafond',faience:'Colle de faïence',fc:'Fibres-ciment'};
+const T=(id,lot,label,mode,w,am=[],so=false)=>({id,lot,label,mode,w,am,so});
+const TPL={
+ LOG:[T('L1','06','Menuiseries extérieures (dépose + pose)','count',5,['murs']),T('L2','01','Carottage façade cuisine','bin',1,['murs']),T('L3','13A','Chaudière → module thermique (MTA)','pct',5,['murs','plafond']),T('L4','13A','Ventilation (bouches, gaines, obturation)','pct',2,['murs','plafond','faience']),T('L5','13B','Robinetterie','pct',1),T('L6','13B','Option : réfection salle de bain','pct',4,['sols','faience'],true),T('L7','12','Mise en sécurité électrique','pct',3,['murs','plafond','faience']),T('L8','12','Attestation Consuel','bin',1),T('L9','08','Coffrages réseau chauffage cuisine','pct',1,['murs','plafond']),T('L10','08','Détalonnage des portes','bin',.5),T('L11','08','Porte palière (remplacement / ferme-porte)','bin',1),T('L12','11','Reprises de peinture','pct',1,['murs']),T('L13','GBMP','Réception du logement, réserves levées','bin',1)],
+ PAL:[T('P1','09','Faux plafond acoustique palier','pct',1),T('P2','11','Peinture palier','pct',1),T('P3','12','Éclairage palier','pct',1)],
+ HALL:[T('H1','06','Ensemble porte vitrée du hall','pct',2),T('H2','10','Revêtement de sol du hall','pct',1,['faience']),T('H3','11','Peinture du hall','pct',1,['faience']),T('H4','12','Éclairage, interphonie, contrôle d’accès','pct',2,['faience']),T('H5','08','Tableaux d’affichage','bin',.5)],
+ ESC:[T('E1','10','Contremarches et nez de marche contrastés','pct',1),T('E2','11','Peinture cage d’escalier','pct',1),T('E3','12','Éclairage cage d’escalier','pct',1)],
+ ASC:[T('S1','01','Gros œuvre / fondations ascenseur','pct',3),T('S2','02','Charpente métallique / gaine','pct',2),T('S3','14','Installation ascenseur PMR','pct',3),T('S4','14','Mise en service / contrôle','bin',1)],
+ SS:[T('SS1','01','Démolitions / flocage sous-station','pct',2,['fc']),T('SS2','13A','Sous-station chauffage urbain','pct',3,['fc']),T('SS3','13A','Réseaux de chauffage en sous-sol','pct',2,['fc']),T('SS4','12','Électricité services généraux','pct',1,['fc'])],
+ TOIT:[T('T1','04','Étanchéité toiture','pct',3,['fc']),T('T2','13A','Caissons VMC et réseaux en toiture','pct',2,['fc'])],
+ FAC:[T('F1','05','Échafaudage monté','bin',1),T('F2','06','Dépose garde-corps','pct',1),T('F3','01','Carottages','pct',1),T('F4','13A','Colonnes chauffage / VMC','pct',2),T('F5','05','ITE + bardage','pct',4),T('F6','05','Échafaudage déposé','bin',1)],
+ EXT:[T('X1','15','VRD','pct',3),T('X2','16','Paysage','pct',2),T('X3','01','Locaux vélos / ordures ménagères','pct',1)]
+};
+const TOW={A:10,B:7,C:10,D:7};
+const POS=['TL','TR','BR','BL'];
+const niv=n=>n===0?'RDC':'R+'+n;
+/* zones */
+const Z={};
+for(const l of DATA.log){const t=l.id[0],i=+l.id.slice(1),n=i<=4?0:Math.floor((i-1)/4),p=POS[(i-1)%4];Z[l.id]={id:l.id,kind:'LOG',tower:t,lvl:n,poly:p==='BL'?(n?'BLc':'BLr'):p,name:'Logement '+l.id,info:l}}
+for(const t in TOW){
+ Z[t+'-HALL']={id:t+'-HALL',kind:'HALL',tower:t,lvl:0,poly:'HALL',name:'Hall tour '+t};
+ for(let n=1;n<=TOW[t];n++)Z[t+'-P'+n]={id:t+'-P'+n,kind:'PAL',tower:t,lvl:n,poly:'PAL',name:'Palier '+niv(n)+' tour '+t};
+ for(const [k,kind,name] of [['ESC','ESC','Cage d’escalier'],['ASC','ASC','Ascenseur PMR'],['SS','SS','Sous-sol / caves'],['TOIT','TOIT','Toiture'],['F1','FAC','Façade 1 (haut du plan)'],['F2','FAC','Façade 2 (droite)'],['F3','FAC','Façade 3 (bas)'],['F4','FAC','Façade 4 (gauche)']])Z[t+'-'+k]={id:t+'-'+k,kind,tower:t,lvl:null,name:name+' · tour '+t};
+}
+Z.EXT={id:'EXT',kind:'EXT',tower:null,lvl:null,name:'Extérieurs (VRD, paysage, locaux)'};
+for(const id in DATA.pc)if(Z[id])Z[id].pcam=DATA.pc[id];
+
+/* ---------- État ---------- */
+const S={docs:{},cfg:{amCheck:false},view:location.hash.slice(1)||'plan',tower:'A',lvl:3,sel:null,open:null,fAm:false,fNr:false,zoom:false,session:null,me:null,users:[],invs:[],photoUrls:{},phQ:new Set(),canWrite:true,mode:'supabase'};
+let prof={label:'',role:'attente',lots:[]};
+function setProf(){const m=S.me;prof={label:(m&&(m.nom||m.email))||'',role:(m&&m.role)||'attente',lots:m&&m.role==='admin'?LOTK:((m&&m.lots)||[])}}
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $=s=>document.querySelector(s);
+const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',3200)};
+const fmtD=iso=>{try{return new Date(iso).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}catch(e){return ''}};
+const canEditTask=t=>S.canWrite&&prof.role!=='cons'&&(prof.role==='admin'||prof.lots.includes(t.lot));
+
+/* ---------- Calcul ---------- */
+const doc=id=>S.docs[id]||{};
+const attrs=id=>{const z=Z[id],a=doc(id).attrs||{};if(z.kind!=='LOG')return{am:z.pcam?'oui':'non',...a};const i=z.info;return{men:i.men,am:i.am,plomb:'nr',edl:'',...a}};
+function zoneAm(id){const z=Z[id];if(z.kind==='LOG'){const a=attrs(id);return{st:a.am,cats:a.am==='oui'?z.info.ac:[],mats:z.info.mt}}if(z.pcam)return{st:'oui',cats:z.kind==='HALL'?['faience']:['fc'],mats:z.pcam};return{st:'non',cats:[],mats:[]}}
+function taskState(id,t){const s=(doc(id).t||{})[t.id];if(!s)return t.so?{st:'so'}:{st:'nr'};return s}
+function taskPct(id,t){const s=taskState(id,t);if(s.st==='so')return null;if(s.st!=='v')return{p:0,nr:true};if(t.mode==='count'){const m=Math.max(1,+attrs(id).men||1);return{p:Math.min(1,(+s.v||0)/m)}}if(t.mode==='bin')return{p:s.v?1:0};return{p:Math.min(1,(+s.v||0)/100)}}
+function agg(ids,lot){let W=0,P=0,n=0,nr=0;for(const id of ids)for(const t of TPL[Z[id].kind]){if(lot&&t.lot!==lot)continue;const r=taskPct(id,t);if(!r)continue;W+=t.w;P+=t.w*r.p;n++;if(r.nr)nr++}return{p:W?P/W:0,n,nr,W}}
+const zonesLvl=(t,n)=>Object.values(Z).filter(z=>z.tower===t&&z.lvl===n).map(z=>z.id);
+const zonesTower=t=>Object.values(Z).filter(z=>z.tower===t).map(z=>z.id);
+const ALL=Object.keys(Z);
+function col(p,nr,n){if(n&&nr===n)return '#c9ccd1';const h=20+p*110;return `hsl(${h} 72% ${p>=1?38:52}%)`}
+const pct=p=>Math.round(p*100)+' %';
+
+/* ---------- Supabase ---------- */
+const sb=window.supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:true,autoRefreshToken:true}});
+const errMsg=e=>(e&&e.message)||String(e);
+async function loadAll(){
+ if(!S.session)return;
+ try{
+  const {data:pr,error:e1}=await sb.from('profiles').select('*').eq('id',S.session.user.id).maybeSingle();if(e1)throw e1;
+  S.me=pr;setProf();if(!pr||pr.role==='attente'){render();return}
+  const [za,cf]=await Promise.all([sb.from('zone_attrs').select('*'),sb.from('config').select('data').eq('id',1).maybeSingle()]);
+  if(za.error)throw za.error;
+  let rows=[];for(let from=0;;from+=1000){const {data,error}=await sb.from('releves').select('*').order('at',{ascending:true}).order('id',{ascending:true}).range(from,from+999);if(error)throw error;rows=rows.concat(data);if(data.length<1000)break}
+  const docs={};for(const r of rows){const d=docs[r.zone_id]||(docs[r.zone_id]={t:{},h:[]});const rec={st:r.st,v:r.v==null?null:+r.v,c:r.c||'',ph:r.photos||[],by:r.by,as:r.by_nom,at:r.at,amOk:r.am_ok};d.t[r.task_id]=rec;d.h.push({task:r.task_id,...rec})}
+  for(const a of (za.data||[])){(docs[a.zone_id]||(docs[a.zone_id]={t:{},h:[]})).attrs=a.data||{}}
+  S.docs=docs;if(cf.data&&cf.data.data)S.cfg={...S.cfg,...cf.data.data};S.loaded=new Date();
+  if(prof.role==='admin')await loadUsers();
+  render();
+ }catch(e){toast('Base de données injoignable : '+errMsg(e))}
+}
+async function loadUsers(){const [p,i]=await Promise.all([sb.from('profiles').select('*').order('created_at'),sb.from('invitations').select('*').order('created_at')]);S.users=p.data||[];S.invs=i.data||[]}
+async function putCfg(c){const {error}=await sb.from('config').update({data:c}).eq('id',1);if(error){toast('Réglage non enregistré : '+errMsg(error));return}S.cfg=c;render()}
+async function saveTask(id,t,st,v,c,ph,amOk){
+ const {data,error}=await sb.from('releves').insert({zone_id:id,task_id:t.id,st,v:st==='v'?v:null,c:c||'',photos:ph||[],am_ok:!!amOk}).select().single();
+ if(error){toast(/row-level security/.test(error.message)?'Enregistrement refusé : ce lot ne vous est pas attribué.':'Enregistrement impossible : '+errMsg(error));return false}
+ const d=S.docs[id]||(S.docs[id]={t:{},h:[]});d.t=d.t||{};d.h=d.h||[];const rec={st:data.st,v:data.v==null?null:+data.v,c:data.c,ph:data.photos||[],by:data.by,as:data.by_nom,at:data.at,amOk:data.am_ok};d.t[t.id]=rec;d.h.push({task:t.id,...rec});render();toast('Relevé enregistré · '+Z[id].name);return true}
+async function saveAttrs(id,patch){const cur=(S.docs[id]&&S.docs[id].attrs)||{};const data={...cur,...patch};const {error}=await sb.from('zone_attrs').upsert({zone_id:id,data,updated_by:S.session.user.id,updated_at:new Date().toISOString()});if(error){toast('Non enregistré : '+errMsg(error));return}(S.docs[id]||(S.docs[id]={t:{},h:[]})).attrs=data;render()}
+async function compress(file){const img=await createImageBitmap(file);const m=1600,r=Math.min(1,m/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);c.getContext('2d').drawImage(img,0,0,c.width,c.height);return await new Promise(res=>c.toBlob(res,'image/jpeg',.72))}
+async function upPhoto(file){const b=await compress(file);const path=`${S.open}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.jpg`;const {error}=await sb.storage.from('photos').upload(path,b,{contentType:'image/jpeg'});if(error)throw error;const u=URL.createObjectURL(b);S.photoUrls[path]=u;return path}
+const BLANK='data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+function phSrc(p){if(S.photoUrls[p])return S.photoUrls[p];S.phQ.add(p);clearTimeout(phSrc.t);phSrc.t=setTimeout(fetchPh,50);return BLANK}
+async function fetchPh(){const ps=[...S.phQ].filter(p=>!S.photoUrls[p]);S.phQ.clear();if(!ps.length)return;const {data}=await sb.storage.from('photos').createSignedUrls(ps,3600);let n=0;for(const r of (data||[]))if(r.signedUrl&&/^https:\/\//.test(r.signedUrl)){S.photoUrls[r.path]=r.signedUrl;n++}if(n)render()}
+function names(){}
+const who=r=>r.as||'—';
+/* ---------- Rendu ---------- */
+function vLogin(){return `<form class="card login" id="lf"><h2>Connexion</h2><label>E-mail<input type="email" id="le" autocomplete="username" required></label><label>Mot de passe<input type="password" id="lp" autocomplete="current-password" minlength="8" required></label><div class="btns"><button class="btn pri" type="submit">Se connecter</button><button class="btn" type="button" id="su">Créer mon compte</button></div><div class="err" id="lerr"></div><p class="note">Première connexion : cliquez sur « Créer mon compte » avec votre e-mail et un mot de passe de 8 caractères minimum. L’administrateur GBMP valide ensuite votre accès et vos lots.</p></form>`}
+function vWait(){return `<div class="card login"><h2>Compte en attente de validation</h2><p>Votre compte <b>${esc(S.session.user.email)}</b> est créé. L’administrateur GBMP doit maintenant vous attribuer un rôle (consultation ou saisie) et vos lots.</p><div class="btns"><button class="btn" id="rf">Vérifier à nouveau</button></div></div>`}
+function render(){
+ const w=$('#who');w.innerHTML=S.session?`<span>${esc(prof.label||S.session.user.email)}<br><span style="opacity:.85">${{admin:'Administrateur',saisie:'Saisie · lots '+esc((prof.lots||[]).join(', ')),cons:'Consultation',attente:'En attente'}[prof.role]||''}</span></span><button id="rf" title="Actualiser les données" aria-label="Actualiser">↻</button><button id="lo">Déconnexion</button>`:'';
+ const ok=S.session&&prof.role!=='attente';$('#tabs').hidden=!ok;
+ if(!S.session){$('#main').innerHTML=vLogin();return}
+ if(!ok){$('#main').innerHTML=S.me?vWait():'<p class="mute">Chargement…</p>';return}
+ document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===S.view));
+ const m=$('#main');
+ m.innerHTML=({plan:vPlan,synth:vSynth,amiante:vAm,hist:vHist,export:vExport,reglages:vReg}[S.view]||vPlan)();
+  if(S.open)renderSheet();
+}
+function lvlList(t){return Array.from({length:TOW[t]+1},(_,i)=>i)}
+function vPlan(){
+ if(S.lvl>TOW[S.tower])S.lvl=TOW[S.tower];
+ const t=S.tower,n=S.lvl,ids=zonesLvl(t,n),a=agg(ids),R=1657/1924;
+ const img=`plans/${t}_${n===0?'rdc':'courant'}.png`;
+ const polys=ids.map(id=>{const z=Z[id],r=agg([id]),am=zoneAm(id);const dim=(S.fAm&&am.st==='non')||(S.fNr&&r.nr===0);const pts=ZP[z.poly].map(p=>[p[0],p[1]*R]);const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length,cy=pts.reduce((s,p)=>s+p[1],0)/pts.length;
+  const lab=z.kind==='LOG'?z.id:(z.kind==='HALL'?'Hall':'Palier');
+  const ic=am.st==='oui'?`<g transform="translate(${(cx-.045).toFixed(3)},${(cy-.095).toFixed(3)}) scale(.04)"><path d="M.5 0 1 .9H0Z" fill="#ffcf33" stroke="#111" stroke-width=".07"/><text x=".5" y=".78" style="font:900 .6px Arial;stroke:none;fill:#111">!</text></g>`:am.st==='verif'?`<text x="${(cx-.025).toFixed(3)}" y="${(cy-.04).toFixed(3)}" class="pc" style="fill:#555">?</text>`:'';
+  return `<polygon data-id="${id}" class="${S.sel===id?'sel':''} ${dim?'dim':''}" points="${pts.map(p=>p.join(',')).join(' ')}" fill="${col(r.p,r.nr,r.n)}"><title>${esc(z.name)} · ${pct(r.p)}</title></polygon>${ic}<text x="${cx.toFixed(3)}" y="${(cy+.005).toFixed(3)}">${lab}</text><text x="${cx.toFixed(3)}" y="${(cy+.05).toFixed(3)}" class="pc">${r.nr===r.n&&r.n?'—':pct(r.p)}</text>`}).join('');
+ const tz=['ESC','ASC','SS','TOIT','F1','F2','F3','F4'].map(k=>{const id=t+'-'+k,r=agg([id]),am=zoneAm(id).st==='oui';return `<button class="chip" data-z="${id}">${am?'⚠ ':''}${esc(Z[id].name.split(' · ')[0])} · ${r.nr===r.n?'—':pct(r.p)}</button>`}).join('')+`<button class="chip" data-z="EXT">Extérieurs · ${pct(agg(['EXT']).p)}</button>`;
+ const list=ids.map(id=>{const r=agg([id]);return `<div class="row"><a href="#plan" data-z="${id}">${esc(Z[id].kind==='LOG'?id+' · '+Z[id].info.typo:Z[id].name.split(' tour')[0])}</a><div class="meter"><i style="width:${r.p*100}%;background:${col(r.p,0,0)}"></i></div><b>${pct(r.p)}</b></div><div class="tw" style="margin:-4px 0 4px">${r.nr} tâche(s) non relevée(s) sur ${r.n}</div>`}).join('');
+ return `<div class="bar"><div class="seg" role="group" aria-label="Tour">${Object.keys(TOW).map(x=>`<button class="chip" data-t="${x}" aria-pressed="${x===t}">Tour ${x}</button>`).join('')}</div>
+ <div class="seg" role="group" aria-label="Filtres"><button class="chip am" id="fAm" aria-pressed="${S.fAm}">⚠ Amiante</button><button class="chip" id="fNr" aria-pressed="${S.fNr}">Non relevés</button><button class="chip" id="zm" aria-pressed="${S.zoom}">Zoom</button></div></div>
+ <div class="bar seg" role="group" aria-label="Niveau">${lvlList(t).map(i=>`<button class="chip" data-l="${i}" aria-pressed="${i===n}">${niv(i)}</button>`).join('')}</div>
+ <div class="layout"><div><div class="plan ${S.zoom?'zoom':''}"><div class="inner"><img src="${img}" alt="Plan ${niv(n)} tour ${t}"><svg viewBox="0 0 1 ${R.toFixed(4)}">${polys}</svg></div></div>
+ <div class="legend"><span><i style="background:var(--nr)"></i>Non relevé</span><span><i style="background:${col(0,0,0)}"></i>0 %</span><span><i style="background:${col(.5,0,0)}"></i>50 %</span><span><i style="background:${col(.99,0,0)}"></i>99 %</span><span><i style="background:${col(1,0,0)}"></i>100 %</span><span>⚠ amiante · ? à vérifier</span></div>
+ <h3 style="margin-top:14px">Parties communes de la tour ${t}</h3><div class="tz">${tz}</div></div>
+ <div class="card"><div class="mute">Tour ${t} · ${niv(n)}</div><div class="big">${pct(a.p)}</div><div class="mute" style="margin-bottom:10px">${a.nr} tâches non relevées sur ${a.n}</div><div class="rows">${list}</div></div></div>`;
+}
+const LOGLOTS=['06','01','13A','13B','12','08','11','GBMP'];
+function dot(r){if(!r||!r.n)return '<span class="dot so" title="Sans objet"></span>';if(r.nr===r.n)return '<span class="dot" style="background:#c9ccd1" title="Non relevé"></span>';return `<span class="dot" style="background:${col(r.p,0,0)}" title="${pct(r.p)}"></span>`}
+function vSynth(){
+ const sub=`<div class="bar seg" role="group" aria-label="Type de synthèse"><button class="chip" data-sy="glob" aria-pressed="${S.sy!=='log'}">Synthèse globale</button><button class="chip" data-sy="log" aria-pressed="${S.sy==='log'}">Intérieur des logements</button></div>`;
+ return sub+(S.sy==='log'?vSynthLog():vSynthGlob());
+}
+function vSynthLog(){
+ const tw=['D','C','B','A'].filter(t=>!S.slT||S.slT===t);
+ const logsOf=t=>Object.values(Z).filter(z=>z.kind==='LOG'&&z.tower===t).sort((a,b)=>a.id.localeCompare(b.id)).map(z=>z.id);
+ const allL=tw.flatMap(logsOf);const g=agg(allL);
+ const head=`<tr><th>Logement</th><th>Niveau</th><th>Type</th><th title="Amiante">Am.</th>${LOGLOTS.map(l=>`<th class="c" title="${esc(LOTS[l])}">${l}</th>`).join('')}<th class="n">Total</th></tr>`;
+ let body='';
+ for(const t of tw){const ids=logsOf(t),a=agg(ids);
+  body+=`<tr class="tot"><td colspan="4"><b>Tour ${t}</b> · ${ids.length} logements</td>${LOGLOTS.map(l=>`<td class="c">${dot(agg(ids,l))}<span class="tw">${pct(agg(ids,l).p)}</span></td>`).join('')}<td class="n"><b>${pct(a.p)}</b></td></tr>`;
+  body+=ids.map(id=>{const z=Z[id],r=agg([id]),am=attrs(id).am;return `<tr><td><a href="#synth" data-z="${id}">${id}</a></td><td>${niv(z.lvl)}</td><td>${z.info.typo}</td><td>${am==='oui'?'⚠':am==='verif'?'?':''}</td>${LOGLOTS.map(l=>`<td class="c">${dot(agg([id],l))}</td>`).join('')}<td class="n">${r.nr===r.n?'—':pct(r.p)}</td></tr>`}).join('')}
+ return `<div class="kpi"><div><span class="mute">Intérieur des logements${S.slT?' · tour '+S.slT:''}</span><b>${pct(g.p)}</b></div><div><span class="mute">Tâches non relevées</span><b>${g.nr} / ${g.n}</b></div></div>
+ <div class="card" style="margin-top:14px"><div class="bar"><h2 style="margin:0">Avancement par logement et par lot</h2><div class="seg" style="margin-left:auto">${['','D','C','B','A'].map(t=>`<button class="chip" data-slt="${t||'all'}" aria-pressed="${(S.slT||'')===t}">${t?'Tour '+t:'Toutes'}</button>`).join('')}</div></div>
+ <div class="legend" style="margin:0 0 8px"><span><span class="dot" style="background:#c9ccd1"></span> non relevé</span><span><span class="dot" style="background:${col(0,0,0)}"></span> 0 %</span><span><span class="dot" style="background:${col(.5,0,0)}"></span> 50 %</span><span><span class="dot" style="background:${col(1,0,0)}"></span> 100 %</span><span><span class="dot so"></span> sans objet</span><span>⚠ amiante · ? à vérifier</span></div>
+ <div class="scroll"><table class="lt"><thead>${head}</thead><tbody>${body}</tbody></table></div>
+ <p class="note">Lots : ${LOGLOTS.map(l=>l+' '+esc(LOTS[l])).join(' · ')}. Pastille = avancement pondéré du lot dans le logement. Touchez un numéro pour ouvrir la fiche.</p></div>`;
+}
+function vSynthGlob(){
+ const g=agg(ALL);const towers=Object.keys(TOW).map(t=>({t,...agg(zonesTower(t))}));
+ const maxL=10;let heat='<tr><th>Niveau</th>'+Object.keys(TOW).map(t=>`<th>Tour ${t}</th>`).join('')+'</tr>';
+ for(let n=maxL;n>=0;n--){heat+=`<tr><th>${niv(n)}</th>`+Object.keys(TOW).map(t=>{if(n>TOW[t])return'<td style="background:transparent"></td>';const r=agg(zonesLvl(t,n));return `<td style="background:${col(r.p,r.nr,r.n)}"><a href="#plan" data-go="${t}|${n}" style="color:#111">${r.nr===r.n?'—':pct(r.p)}</a></td>`}).join('')+'</tr>'}
+ const lots=LOTK.map(l=>({l,...agg(ALL,l)})).filter(x=>x.n);
+ const logs=Object.values(Z).filter(z=>z.kind==='LOG');const done=logs.filter(z=>agg([z.id]).p>=1).length;const start=logs.filter(z=>{const r=agg([z.id]);return r.nr<r.n}).length;
+ return `<div class="kpi"><div><span class="mute">Chantier</span><b>${pct(g.p)}</b></div><div><span class="mute">Logements commencés</span><b>${start} / 152</b></div><div><span class="mute">Logements à 100 %</span><b>${done}</b></div><div><span class="mute">Tâches non relevées</span><b>${g.nr} / ${g.n}</b></div></div>
+ <div class="grid2" style="margin-top:14px"><div class="card"><h2>Par tour et par niveau</h2><div class="scroll"><table class="heat">${heat}</table></div><div class="rows" style="margin-top:12px">${towers.map(x=>`<div class="row"><span>Tour ${x.t}</span><div class="meter"><i style="width:${x.p*100}%;background:${col(x.p,0,0)}"></i></div><b>${pct(x.p)}</b></div>`).join('')}</div></div>
+ <div class="card"><h2>Par lot</h2><div class="rows">${lots.map(x=>`<div class="row"><span>${esc(x.l)} · ${esc(LOTS[x.l])}<br><span class="tw">${x.nr} non relevée(s) / ${x.n}</span></span><div class="meter"><i style="width:${x.p*100}%;background:${col(x.p,0,0)}"></i></div><b>${pct(x.p)}</b></div>`).join('')}</div></div></div>
+ <p class="note">Moyennes pondérées par le poids des tâches. Une tâche non relevée compte pour 0 % ; une tâche « sans objet » est exclue du calcul.</p>`;
+}
+function vAm(){
+ const lots=prof.role==='saisie'?prof.lots:LOTK;if(!S.amLot||!lots.includes(S.amLot))S.amLot=lots[0];
+ const L=S.amLot;const rows=[];
+ for(const id of ALL){const am=zoneAm(id);if(am.st!=='oui')continue;const ts=TPL[Z[id].kind].filter(t=>t.lot===L&&t.am.some(c=>am.cats.includes(c)));if(!ts.length)continue;const r=agg([id],L);rows.push(`<tr><td><a href="#amiante" data-z="${id}">${esc(Z[id].kind==='LOG'?id+' · '+niv(Z[id].lvl):Z[id].name)}</a></td><td>${ts.map(t=>esc(t.label)).join('<br>')}</td><td>${am.cats.map(c=>esc(AMC[c])).join(', ')}</td><td class="n">${pct(r.p)}</td></tr>`)}
+ const ver=Object.values(Z).filter(z=>z.kind==='LOG'&&attrs(z.id).am==='verif').map(z=>`<a href="#amiante" data-z="${z.id}">${z.id}</a>`).join(', ');
+ return `<div class="card"><h2>Mes interventions en zone amiantée</h2><div class="bar"><label for="amL">Lot</label><select id="amL" class="f" style="max-width:340px">${lots.map(l=>`<option value="${l}" ${l===L?'selected':''}>${l} · ${esc(LOTS[l])}</option>`).join('')}</select></div>
+ <div class="amw">Toute intervention sur ou à proximité de ces matériaux suit le mode opératoire validé par l’AMO amiante et le coordonnateur SPS (CCTP 06.4.1.2, sous-sections 3 et 4).</div>
+ <p class="mute">${rows.length} zone(s) concernée(s) pour le lot ${esc(L)}.</p>
+ <div class="scroll"><table class="stack"><thead><tr><th>Zone</th><th>Tâches concernées</th><th>Matériaux amiantés</th><th class="n">Avancement lot</th></tr></thead><tbody>${rows.join('')||'<tr><td colspan="4">Aucune zone amiantée pour ce lot.</td></tr>'}</tbody></table></div>
+ <h3 style="margin-top:16px">Logements à vérifier (absents des rapports)</h3><p>${ver||'Aucun.'}</p><p class="note">Source : rapports de repérage AED Expertises, listes D.2 et D.3, tours A à D.</p></div>`;
+}
+function allHist(){const out=[];for(const id in S.docs)for(const h of (S.docs[id].h||[]))out.push({id,...h});return out.sort((a,b)=>String(b.at).localeCompare(String(a.at)))}
+function valTxt(t,r,id){if(!t)return'';if(r.st==='so')return'Sans objet';if(r.st==='nr')return'Non relevé';if(t.mode==='count')return `${r.v} / ${attrs(id).men} menuiseries`;if(t.mode==='bin')return r.v?'Fait':'Pas fait';return r.v+' %'}
+const tOf=(id,tid)=>TPL[Z[id].kind].find(t=>t.id===tid);
+function vHist(){
+ const H=allHist().filter(h=>Z[h.id]&&(!S.hT||Z[h.id].tower===S.hT)&&(!S.hL||(tOf(h.id,h.task)||{}).lot===S.hL));names(H.slice(0,200).map(h=>h.by));
+ return `<div class="bar"><select id="hT" class="f" style="max-width:160px"><option value="">Toutes les tours</option>${Object.keys(TOW).map(t=>`<option ${S.hT===t?'selected':''} value="${t}">Tour ${t}</option>`).join('')}</select><select id="hL" class="f" style="max-width:280px"><option value="">Tous les lots</option>${LOTK.map(l=>`<option ${S.hL===l?'selected':''} value="${l}">${l} · ${esc(LOTS[l])}</option>`).join('')}</select><span class="mute">${H.length} relevé(s)</span></div>
+ <div class="hist">${H.slice(0,200).map(h=>{const t=tOf(h.id,h.task);return `<div class="card"><b>${esc(Z[h.id].name)}</b> · ${esc(t?t.lot+' '+t.label:h.task)}<br><b>${esc(valTxt(t,h,h.id))}</b>${h.amOk?' · mode opératoire amiante appliqué':''}<div class="mute">${fmtD(h.at)} · ${esc(who(h))}</div>${h.c?`<div>${esc(h.c)}</div>`:''}${h.ph&&h.ph.length?`<div class="ph">${h.ph.map(p=>`<img src="${esc(phSrc(p))}" alt="Photo">`).join('')}</div>`:''}</div>`}).join('')||'<p class="mute">Aucun relevé pour l’instant. Ouvrez un logement depuis le plan pour saisir le premier.</p>'}</div>`;
+}
+function vExport(){
+ const t=S.exT||S.tower;S.exSel=S.exSel||{};
+ return `<div class="card"><h2>Export PDF de plusieurs étages</h2><p class="mute">Un seul fichier : pour chaque niveau choisi, le plan colorié, les pourcentages et les remarques en cours. Choisissez un lot pour n’exporter que son avancement et ses remarques.</p>
+ <div class="bar seg">${Object.keys(TOW).map(x=>`<button class="chip" data-ext="${x}" aria-pressed="${x===t}">Tour ${x}</button>`).join('')}</div>
+ <div class="bar"><label for="exLot">Lot</label><select id="exLot" class="f" style="max-width:340px"><option value="">Tous les lots</option>${LOTK.map(l=>`<option value="${l}" ${S.exLot===l?'selected':''}>${l} · ${esc(LOTS[l])}</option>`).join('')}</select></div>
+ <div class="bar seg">${lvlList(t).map(n=>`<label class="chip"><input type="checkbox" data-exl="${n}" ${S.exSel[t+n]?'checked':''}> ${niv(n)}</label>`).join('')}</div>
+ <div class="btns"><button class="btn" id="exAll">Tous les niveaux</button><button class="btn pri" id="exGo">Générer le PDF</button></div><p class="note" id="exMsg"></p></div>`;
+}
+const ROLES={admin:'Administrateur',saisie:'Saisie',cons:'Consultation',attente:'En attente'};
+const parseLots=v=>[...new Set(String(v).split(/[\s,;]+/).map(x=>x.trim().toUpperCase()).filter(x=>LOTK.includes(x)))];
+function vUsers(){
+ const rows=S.users.map(u=>`<tr><td><input type="text" data-un="${esc(u.id)}" value="${esc(u.nom||'')}" aria-label="Nom"></td><td>${esc(u.email)}</td><td><select class="f" data-ur="${esc(u.id)}">${Object.keys(ROLES).map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${ROLES[r]}</option>`).join('')}</select></td><td><input type="text" data-ul="${esc(u.id)}" value="${esc((u.lots||[]).join(', '))}" placeholder="ex. 12, 13A" aria-label="Lots"></td><td><div class="btns"><button class="btn pri" data-us="${esc(u.id)}">Enregistrer</button><button class="btn" data-upw="${esc(u.id)}">Mot de passe</button></div><div id="pw-${esc(u.id)}"></div></td></tr>`).join('');
+ const inv=S.invs.map(i=>`<tr><td>${esc(i.nom||'')}</td><td>${esc(i.email)}</td><td>${ROLES[i.role]||esc(i.role)}</td><td>${esc((i.lots||[]).join(', '))}</td><td><button class="btn" data-idel="${esc(i.email)}">Retirer</button></td></tr>`).join('');
+ return `<div class="card" style="grid-column:1/-1"><h2>Utilisateurs</h2><p class="mute">Lots possibles : ${LOTK.join(', ')}. Un compte « Saisie » ne peut enregistrer que sur ses lots.</p><div class="scroll"><table class="stack"><thead><tr><th>Nom / entreprise</th><th>E-mail</th><th>Rôle</th><th>Lots</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+ <h3 style="margin-top:16px">Pré-autoriser une personne</h3><p class="mute">Elle obtiendra ce rôle et ces lots dès qu’elle créera son compte avec cet e-mail.</p>
+ <form id="invF" class="grid2" style="gap:8px"><input type="email" id="iE" placeholder="E-mail" required><input type="text" id="iN" placeholder="Nom / entreprise"><select class="f" id="iR"><option value="saisie">Saisie</option><option value="cons">Consultation</option><option value="admin">Administrateur</option></select><input type="text" id="iL" placeholder="Lots, ex. 12, 13A"><button class="btn pri" type="submit">Ajouter</button></form>
+ ${inv?`<div class="scroll" style="margin-top:10px"><table class="stack"><thead><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Lots</th><th></th></tr></thead><tbody>${inv}</tbody></table></div>`:''}</div>`;
+}
+function vReg(){
+ const adm=prof.role==='admin';
+ return `<div class="grid2"><div class="card"><h2>Réglages</h2><label class="chk"><input type="checkbox" id="amChk" ${S.cfg.amCheck?'checked':''} ${adm?'':'disabled'}> Exiger la case « mode opératoire amiante appliqué » avant de saisir une tâche en zone amiantée</label>
+ <p class="note">Données : Supabase${S.loaded?' · actualisées à '+S.loaded.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):''}.</p></div>
+ <div class="card"><h2>Tâches et poids</h2><div class="scroll"><table class="stack"><thead><tr><th>Lot</th><th>Tâche (logement)</th><th>Relevé</th><th class="n">Poids</th></tr></thead><tbody>${TPL.LOG.map(t=>`<tr><td>${t.lot}</td><td>${esc(t.label)}${t.so?' (sans objet par défaut)':''}</td><td>${{count:'nb de menuiseries',pct:'%',bin:'fait / pas fait'}[t.mode]}</td><td class="n">${String(t.w).replace('.',',')}</td></tr>`).join('')}</tbody></table></div><p class="note">Total d’un logement sans option : 22,5 points.</p></div>${adm?vUsers():''}</div>`;
+}
+
+/* ---------- Fiche ---------- */
+function openZone(id){S.sel=id;S.open=id;S.edit=null;S.draft=null;$('#sheet').classList.add('open');render();const h=(doc(id).h||[]).map(x=>x.by);names(h)}
+function closeSheet(){S.open=null;S.sel=null;$('#sheet').classList.remove('open');render()}
+function renderSheet(){
+ const id=S.open,z=Z[id],a=attrs(id),am=zoneAm(id),r=agg([id]);const adm=prof.role==='admin'&&S.canWrite;
+ let h=`<header><div><b style="font-size:18px">${esc(z.name)}</b><br><span style="font-size:13px">${z.kind==='LOG'?`${z.info.typo} · ${niv(z.lvl)} · tour ${z.tower}`:'Partie commune'}</span></div><button class="x" id="xs" aria-label="Fermer">×</button></header>`;
+ h+=`<section><div class="big">${pct(r.p)}</div><div class="mute">${r.nr} tâche(s) non relevée(s) sur ${r.n} · moyenne pondérée</div></section>`;
+ if(am.st==='oui')h+=`<section><div class="amb"><b>⚠ Amiante présent${z.kind==='LOG'&&z.info.anc?' (anciennes analyses)':''}</b><ul>${am.mats.map(m=>`<li>${esc(m)}</li>`).join('')}</ul></div></section>`;
+ else if(am.st==='verif')h+=`<section><div class="amb" style="background:#e6e6e6"><b>? Amiante à vérifier</b>Logement absent des rapports de repérage transmis.</div></section>`;
+ if(z.kind==='LOG')h+=`<section><div class="grid2" style="gap:10px"><label>Menuiseries<input type="number" min="1" max="12" id="aMen" value="${esc(a.men)}" ${adm?'':'disabled'}></label><label>Amiante<select class="f" id="aAm" ${adm?'':'disabled'}>${[['oui','Présent'],['non','Non trouvé'],['verif','À vérifier']].map(([k,l])=>`<option value="${k}" ${a.am===k?'selected':''}>${l}</option>`).join('')}</select></label><label>Plomb<select class="f" id="aPb" ${adm?'':'disabled'}>${[['nr','Non renseigné'],['oui','Présent'],['non','Absent']].map(([k,l])=>`<option value="${k}" ${a.plomb===k?'selected':''}>${l}</option>`).join('')}</select></label><label>État des lieux (lien)<input type="url" id="aEdl" placeholder="https://…" value="${esc(a.edl)}" ${adm?'':'disabled'}></label></div>${a.edl&&/^https:\/\//.test(a.edl)?`<p><a href="${esc(a.edl)}" target="_blank" rel="noopener">Ouvrir l’état des lieux</a></p>`:''}</section>`;
+ h+='<section><h3>Tâches</h3>';
+ for(const t of TPL[z.kind]){const s=taskState(id,t),tp=taskPct(id,t);const amT=am.st==='oui'&&t.am.some(c=>am.cats.includes(c));const ed=canEditTask(t);
+  const stt=s.st==='so'?'<span class="st nr">sans objet</span>':s.st==='nr'?'<span class="st nr">non relevé</span>':`<span class="st">${t.mode==='count'?esc(s.v)+'/'+esc(a.men):t.mode==='bin'?(s.v?'fait':'0 %'):esc(s.v)+' %'}</span>`;
+  h+=`<div class="task"><button data-task="${t.id}" aria-expanded="${S.edit===t.id}"><span class="lot">${t.lot}</span><span>${amT?'⚠ ':''}${esc(t.label)}<br><span class="tw">poids ${String(t.w).replace('.',',')}${s.at?' · '+fmtD(s.at)+' · '+esc(who(s)):''}</span></span>${stt}</button>`;
+  if(S.edit===t.id){const d=S.draft;h+=`<div class="ed">${amT?`<div class="amw"><b>Zone amiantée :</b> ${esc(am.cats.map(c=>AMC[c]).join(', '))}. Mode opératoire validé AMO / SPS obligatoire.</div>`:''}${s.c?`<div class="mute">Dernière remarque : ${esc(s.c)}</div>`:''}`;
+   if(!ed)h+=`<p class="mute">${prof.role==='cons'||!S.canWrite?'Profil en consultation : lecture seule.':'Cette tâche relève du lot '+t.lot+' : saisie réservée à ce lot.'}</p>`;
+   else{h+=`<div class="btns"><button class="btn ${d.st==='nr'?'on':''}" data-st="nr">Non relevé</button><button class="btn ${d.st==='so'?'on':''}" data-st="so">Sans objet</button></div>`;
+    if(t.mode==='pct')h+=`<label>Avancement : <b id="pv">${d.v} %</b><input type="range" min="0" max="100" step="5" id="rng" value="${d.v}"></label><div class="btns">${[0,25,50,75,100].map(v=>`<button class="btn ${d.st==='v'&&+d.v===v?'on':''}" data-v="${v}">${v} %</button>`).join('')}</div>`;
+    else if(t.mode==='count'){h+=`<div class="btns" style="align-items:center"><button class="btn" data-dv="-1" aria-label="Moins">−</button><b style="font-size:22px">${d.v} / ${esc(a.men)}</b><button class="btn" data-dv="1" aria-label="Plus">+</button><span class="mute">menuiseries posées</span></div>`}
+    else h+=`<div class="btns"><button class="btn ${d.st==='v'&&!d.v?'on':''}" data-v="0">Pas fait</button><button class="btn ${d.st==='v'&&d.v?'on':''}" data-v="1">Fait</button></div>`;
+    h+=`<label>Remarques, travaux restant à faire<textarea id="cm">${esc(d.c)}</textarea></label><label class="btn" style="display:inline-flex;align-items:center;gap:6px;width:max-content">📷 Ajouter des photos<input type="file" accept="image/*" multiple id="phI" style="display:none"></label><div class="ph">${d.ph.map(p=>`<img src="${esc(phSrc(p))}" alt="Photo">`).join('')}</div>`;
+    if(amT&&S.cfg.amCheck)h+=`<label class="chk"><input type="checkbox" id="amOk" ${d.amOk?'checked':''}> Mode opératoire amiante appliqué</label>`;
+    h+=`<div class="btns"><button class="btn pri" id="sv">Enregistrer le relevé</button><button class="btn" id="cx">Annuler</button></div>`}
+   const hs=(doc(id).h||[]).filter(x=>x.task===t.id).slice(-5).reverse();if(hs.length)h+=`<div class="tw"><b>Historique</b><br>${hs.map(x=>`${fmtD(x.at)} · ${esc(valTxt(t,x,id))} · ${esc(who(x))}${x.c?' — '+esc(x.c):''}`).join('<br>')}</div>`;
+   h+='</div>'}
+  h+='</div>'}
+ h+='</section>';
+ $('#sheet').innerHTML=h;
+}
+
+/* ---------- Export PDF ---------- */
+function loadJsPDF(){return new Promise((res,rej)=>{if(window.jspdf)return res(window.jspdf);const s=document.createElement('script');s.src='lib/jspdf.umd.min.js';s.onload=()=>res(window.jspdf);s.onerror=rej;document.head.appendChild(s)})}
+const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src});
+function hexOf(css){const c=document.createElement('canvas').getContext('2d');c.fillStyle=css;return c.fillStyle}
+async function doExport(){
+ const t=S.exT||S.tower,L=S.exLot||'';const lv=lvlList(t).filter(n=>S.exSel[t+n]);const msg=$('#exMsg');
+ if(!lv.length){msg.textContent='Cochez au moins un niveau.';return}
+ msg.textContent='Préparation du PDF…';
+ try{const {jsPDF}=await loadJsPDF();const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});const today=new Date().toLocaleDateString('fr-FR');
+  for(const [k,n] of lv.entries()){if(k)pdf.addPage();
+   const im=await loadImg(`plans/${t}_${n===0?'rdc':'courant'}.png`);const c=document.createElement('canvas');c.width=1400;c.height=Math.round(1400*im.height/im.width);const g=c.getContext('2d');g.drawImage(im,0,0,c.width,c.height);
+   const ids=zonesLvl(t,n).filter(id=>!L||TPL[Z[id].kind].some(x=>x.lot===L));
+   for(const id of ids){const z=Z[id],r=agg([id],L),pts=ZP[z.poly];g.beginPath();pts.forEach((p,i)=>g[i?'lineTo':'moveTo'](p[0]*c.width,p[1]*c.height));g.closePath();g.globalAlpha=.5;g.fillStyle=hexOf(col(r.p,r.nr,r.n).trim()||'#c9ccd1');g.fill();g.globalAlpha=1;g.lineWidth=3;g.strokeStyle='#111';g.stroke();
+    const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length*c.width,cy=pts.reduce((s,p)=>s+p[1],0)/pts.length*c.height;g.font='bold 34px Arial';g.textAlign='center';g.lineWidth=7;g.strokeStyle='#fff';const l1=z.kind==='LOG'?z.id:(z.kind==='HALL'?'Hall':'Palier'),l2=(r.nr===r.n?'—':pct(r.p))+(zoneAm(id).st==='oui'?' ⚠':'');g.strokeText(l1,cx,cy);g.fillStyle='#111';g.fillText(l1,cx,cy);g.font='bold 46px Arial';g.strokeText(l2,cx,cy+50);g.fillText(l2,cx,cy+50)}
+   pdf.setFillColor(231,29,51);pdf.rect(0,0,297,16,'F');pdf.setTextColor(255);pdf.setFont('helvetica','bold');pdf.setFontSize(14);pdf.text('GBMP · Résidence Le Treuil',8,10.5);pdf.setFontSize(11);pdf.text(`${L?'Lot '+L+' '+LOTS[L]+' · ':''}Tour ${t} · ${niv(n)} · avancement ${pct(agg(ids,L).p)} · ${today}`,289,10.5,{align:'right'});
+   const pw=160,ph=pw*c.height/c.width;pdf.addImage(c.toDataURL('image/jpeg',.82),'JPEG',6,20,pw,ph);
+   pdf.setTextColor(20);let y=24;const X=172;
+   for(const id of ids){const z=Z[id],r=agg([id],L);pdf.setFont('helvetica','bold');pdf.setFontSize(10);pdf.text(`${z.kind==='LOG'?z.id+' ('+z.info.typo+')':z.name.split(' tour')[0]} : ${pct(r.p)} · ${r.nr} non relevée(s)${zoneAm(id).st==='oui'?' · amiante':''}`,X,y);y+=5;pdf.setFont('helvetica','normal');pdf.setFontSize(8);
+    for(const tk of TPL[z.kind]){if(L&&tk.lot!==L)continue;const s=taskState(id,tk);if(s.st==='v'&&s.c){const lines=pdf.splitTextToSize(`${tk.lot} ${tk.label} (${valTxt(tk,s,id)}) : ${s.c}`,118);if(y+lines.length*3.6>200){pdf.addPage();y=16}pdf.text(lines,X+2,y);y+=lines.length*3.6}}
+    y+=2;if(y>198){pdf.addPage();y=16}}
+   pdf.setFontSize(7);pdf.setTextColor(110);pdf.text('Moyenne pondérée des tâches ; non relevé = 0 % ; sans objet exclu.',6,205)}
+  pdf.save(`Le_Treuil_${L?'lot_'+L+'_':''}tour_${t}_${lv.map(niv).join('_')}.pdf`);msg.textContent='PDF prêt.'}
+ catch(e){msg.textContent='Export interrompu ou refusé. Réessayez.'}
+}
+
+/* ---------- Événements ---------- */
+document.addEventListener('click',async e=>{
+ const b=e.target.closest('button,a,polygon,label.chip');if(!b)return;
+ if(b.id==='lo'){await sb.auth.signOut();return}
+ if(b.id==='rf'){await loadAll();toast('Données actualisées.');return}
+ if(b.id==='su'){const em=$('#le').value.trim(),pw=$('#lp').value;const er=$('#lerr');if(!em||pw.length<8){er.textContent='E-mail et mot de passe de 8 caractères minimum.';return}er.textContent='Création…';const {data,error}=await sb.auth.signUp({email:em,password:pw});if(error){er.textContent=/registered/i.test(error.message)?'Ce compte existe déjà : utilisez « Se connecter ».':'Création impossible : '+error.message;return}if(!data.session){er.textContent='Compte créé, mais Supabase demande une confirmation par e-mail. L’administrateur doit désactiver « Confirm email » (voir le guide).';return}er.textContent='';return}
+ if(b.dataset.us){const id=b.dataset.us;const nom=document.querySelector(`[data-un="${id}"]`).value.trim(),role=document.querySelector(`[data-ur="${id}"]`).value,lots=parseLots(document.querySelector(`[data-ul="${id}"]`).value);if(id===S.session.user.id&&role!=='admin'){toast('Vous ne pouvez pas retirer votre propre rôle d’administrateur.');return}const {error}=await sb.from('profiles').update({nom,role,lots}).eq('id',id);toast(error?'Non enregistré : '+error.message:'Utilisateur mis à jour.');await loadUsers();render();return}
+ if(b.dataset.upw){const id=b.dataset.upw;$('#pw-'+CSS.escape(id)).innerHTML=`<div class="btns" style="margin-top:6px"><input type="text" id="npw" placeholder="Nouveau mot de passe (8+)" style="max-width:220px"><button class="btn pri" data-upws="${esc(id)}">Valider</button></div>`;return}
+ if(b.dataset.upws){const pw=$('#npw').value;if(pw.length<8){toast('8 caractères minimum.');return}const {error}=await sb.rpc('admin_set_password',{target:b.dataset.upws,new_password:pw});toast(error?'Échec : '+error.message:'Mot de passe changé. Communiquez-le à la personne.');if(!error)$('#pw-'+CSS.escape(b.dataset.upws)).innerHTML='';return}
+ if(b.dataset.idel){const {error}=await sb.from('invitations').delete().eq('email',b.dataset.idel);toast(error?'Échec : '+error.message:'Pré-autorisation retirée.');await loadUsers();render();return}
+ if(b.closest('#tabs')&&b.dataset.v){S.view=b.dataset.v;location.hash=S.view;render();return}
+ if(b.dataset.t){S.tower=b.dataset.t;render();return}
+ if(b.dataset.l){S.lvl=+b.dataset.l;render();return}
+ if(b.id==='fAm'){S.fAm=!S.fAm;render();return}
+ if(b.id==='fNr'){S.fNr=!S.fNr;render();return}
+ if(b.id==='zm'){S.zoom=!S.zoom;render();return}
+ if(b.dataset.id){openZone(b.dataset.id);return}
+ if(b.dataset.z){e.preventDefault();const z=Z[b.dataset.z];if(z.lvl!=null&&z.tower){S.tower=z.tower;S.lvl=z.lvl}openZone(b.dataset.z);return}
+ if(b.dataset.go){e.preventDefault();const [t,n]=b.dataset.go.split('|');S.tower=t;S.lvl=+n;S.view='plan';location.hash='plan';render();return}
+ if(b.id==='xs'){closeSheet();return}
+ if(b.dataset.task){const id=S.open,t=tOf(id,b.dataset.task);if(S.edit===t.id){S.edit=null}else{S.edit=t.id;const s=taskState(id,t);S.draft={st:s.st==='v'?'v':s.st,v:s.st==='v'?+s.v:(t.mode==='pct'?0:0),c:s.c||'',ph:[],amOk:false}}renderSheet();return}
+ if(b.dataset.st){S.draft.st=b.dataset.st;renderSheet();return}
+ if(b.dataset.v!==undefined&&S.draft){S.draft.st='v';S.draft.v=+b.dataset.v;renderSheet();return}
+ if(b.dataset.dv){const m=+attrs(S.open).men;S.draft.st='v';S.draft.v=Math.max(0,Math.min(m,S.draft.v+ +b.dataset.dv));renderSheet();return}
+ if(b.id==='cx'){S.edit=null;renderSheet();return}
+ if(b.id==='sv'){const id=S.open,t=tOf(id,S.edit),d=S.draft,am=zoneAm(id),amT=am.st==='oui'&&t.am.some(c=>am.cats.includes(c));d.c=$('#cm').value.trim();
+  if(amT&&S.cfg.amCheck&&!($('#amOk')||{}).checked){toast('Cochez « mode opératoire amiante appliqué » pour enregistrer.');return}
+  if(d.st==='nr'&&!(doc(id).t||{})[t.id]&&!t.so&&!d.c){toast('Rien à enregistrer.');return}
+  b.disabled=true;const ok=await saveTask(id,t,d.st,d.v,d.c,d.ph,amT&&S.cfg.amCheck);if(ok){S.edit=null}renderSheet();return}
+ if(b.dataset.sy){S.sy=b.dataset.sy;render();return}
+ if(b.dataset.slt){S.slT=b.dataset.slt==='all'?'':b.dataset.slt;render();return}
+ if(b.dataset.ext){S.exT=b.dataset.ext;render();return}
+ if(b.id==='exAll'){const t=S.exT||S.tower;lvlList(t).forEach(n=>S.exSel[t+n]=true);render();return}
+ if(b.id==='exGo'){doExport();return}
+});
+document.addEventListener('change',async e=>{const el=e.target;
+ if(el.id==='exLot'){S.exLot=el.value;return}
+ if(el.id==='amL'){S.amLot=el.value;render();return}
+ if(el.id==='hT'){S.hT=el.value;render();return}
+ if(el.id==='hL'){S.hL=el.value;render();return}
+ if(el.dataset.exl!==undefined){const t=S.exT||S.tower;S.exSel[t+el.dataset.exl]=el.checked;return}
+ if(el.id==='amChk'){putCfg({...S.cfg,amCheck:el.checked});return}
+ if(el.id==='aMen'){const v=Math.max(1,Math.min(12,parseInt(el.value)||1));saveAttrs(S.open,{men:v});return}
+ if(el.id==='aAm'){saveAttrs(S.open,{am:el.value});return}
+ if(el.id==='aPb'){saveAttrs(S.open,{plomb:el.value});return}
+ if(el.id==='aEdl'){const v=el.value.trim();if(v&&!/^https:\/\//.test(v)){toast('Le lien doit commencer par https://');return}saveAttrs(S.open,{edl:v});return}
+ if(el.id==='phI'){const fs=[...el.files].slice(0,6);if(!fs.length)return;toast('Envoi des photos…');try{for(const f of fs)S.draft.ph.push(await upPhoto(f));S.draft.c=($('#cm')||{}).value||S.draft.c;renderSheet()}catch(x){toast('Photo non enregistrée.')}return}
+});
+document.addEventListener('input',e=>{if(e.target.id==='rng'&&S.draft){S.draft.st='v';S.draft.v=+e.target.value;$('#pv').textContent=S.draft.v+' %'}if(e.target.id==='cm'&&S.draft)S.draft.c=e.target.value});
+document.addEventListener('submit',async e=>{e.preventDefault();
+ if(e.target.id==='lf'){const er=$('#lerr');er.textContent='Connexion…';const {error}=await sb.auth.signInWithPassword({email:$('#le').value.trim(),password:$('#lp').value});er.textContent=error?(/confirm/i.test(error.message)?'E-mail non confirmé : l’administrateur doit désactiver « Confirm email » dans Supabase.':'E-mail ou mot de passe incorrect.'):'';return}
+ if(e.target.id==='invF'){const email=$('#iE').value.trim().toLowerCase();const {error}=await sb.from('invitations').upsert({email,nom:$('#iN').value.trim()||null,role:$('#iR').value,lots:parseLots($('#iL').value)});toast(error?'Échec : '+error.message:'Personne pré-autorisée : '+email);await loadUsers();render();return}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.open)closeSheet()});
+window.addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(v&&v!==S.view&&['plan','synth','amiante','hist','export','reglages'].includes(v)){S.view=v;render()}});
+
+/* ---------- Démarrage ---------- */
+render();
+sb.auth.getSession().then(({data})=>{S.session=data.session;if(S.session)loadAll();else render()});
+sb.auth.onAuthStateChange((ev,ses)=>{const was=S.session&&S.session.user.id;S.session=ses;if(!ses){S.me=null;S.docs={};setProf();closeSheet();render()}else if(was!==ses.user.id){loadAll()}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.session&&(!S.loaded||Date.now()-S.loaded>60000))loadAll()});
+setInterval(()=>{if(document.visibilityState==='visible'&&S.session&&!S.edit)loadAll()},180000);
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
