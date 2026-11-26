@@ -72,6 +72,7 @@ main{padding:14px max(3vw,12px) 80px;max-width:1300px;margin:0 auto}
 .amb summary{cursor:pointer;min-height:28px}.amb summary b{display:inline}
 .amb ul{margin:4px 0 0;padding-left:18px}
 .ig{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:var(--ink);color:var(--bg);padding:10px 12px;border-radius:8px;margin:8px 0 6px;font-size:15px;min-height:52px}.igs{font-size:12px;opacity:.8;font-weight:400}.igp{font-weight:700;white-space:nowrap}.eg{font-weight:700;font-size:14px;margin:8px 0 6px;padding-left:8px;border-left:4px solid var(--red)}
+.pl td,.pl th{padding:6px 8px;white-space:nowrap;vertical-align:top}.pl td:first-child,.pl th:first-child{position:sticky;left:0;background:var(--card)}.pd2{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}.swsel td{background:#fff4c2!important;color:#111}.pl .btn{min-height:36px;padding:2px 9px}
 .tei{border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:12px}.te td,.te th{padding:4px;border:0}.te input[type=text]{min-width:200px;padding:8px}.te select.f{padding:8px;min-width:70px}.te .btn{min-height:38px;padding:4px 10px}
 .task{border:1px solid var(--line);border-radius:8px;margin-bottom:8px}
 .task>button{display:grid;grid-template-columns:44px minmax(0,1fr) 60px;gap:8px;align-items:center;width:100%;border:0;background:none;padding:10px;text-align:left;min-height:52px}
@@ -120,6 +121,7 @@ label.chk input{width:22px;height:22px;flex:none}
 </header>
 <nav role="tablist" id="tabs" hidden>
   <button role="tab" data-v="plan" aria-selected="true">Plan</button>
+  <button role="tab" data-v="planning">Planning</button>
   <button role="tab" data-v="synth">Synthèse</button>
   <button role="tab" data-v="amiante">Amiante</button>
   <button role="tab" data-v="hist">Historique</button>
@@ -133,6 +135,7 @@ label.chk input{width:22px;height:22px;flex:none}
 <script src="config.js"></script>
 <script src="lib/supabase.js"></script>
 <script src="data.js"></script>
+<script src="lib/planning.js"></script>
 <script>
 {
 /* ---------- Référentiel ---------- */
@@ -254,7 +257,7 @@ function render(){
  if(!ok){$('#main').innerHTML=S.me?vWait():'<p class="mute">Chargement…</p>';return}
  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===S.view));
  const m=$('#main');
- m.innerHTML=({plan:vPlan,synth:vSynth,amiante:vAm,hist:vHist,export:vExport,reglages:vReg,activite:vAct}[S.view]||vPlan)();
+ m.innerHTML=({planning:vPlanning,plan:vPlan,synth:vSynth,amiante:vAm,hist:vHist,export:vExport,reglages:vReg,activite:vAct}[S.view]||vPlan)();
   if(S.open)renderSheet();
 }
 function lvlList(t){return Array.from({length:TOW[t]+1},(_,i)=>i)}
@@ -278,6 +281,46 @@ function vPlan(){
 }
 let LOGLOTS=[];
 function dot(r){if(!r||!r.n)return '<span class="dot so" title="Sans objet"></span>';if(r.nr===r.n)return '<span class="dot" style="background:#c9ccd1" title="Non relevé"></span>';return `<span class="dot" style="background:${col(r.p,0,0)}" title="${pct(r.p)}"></span>`}
+/* ---------- Planning ---------- */
+const TP=window.TreuilPlanning;const PH=['P1','P2','P3','P4'];
+const PHN={P1:'1 · Électricité',P2:'2 · Salle de bain',P3:'3 · Porte palière et menuiseries',P4:'4 · MTA'};
+const OFFT={pause:'Pause chantier',ferie:'Jour férié',conge:'Congés',intemperie:'Intempéries'};
+const todayIso=()=>{const d=new Date();return new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())).toISOString().slice(0,10)};
+const fd=x=>x?x.d.slice(8,10)+'/'+x.d.slice(5,7)+(x.pm?' ap.-m.':''):'—';
+const fdl=x=>x?x.d.slice(8,10)+'/'+x.d.slice(5,7)+'/'+x.d.slice(2,4)+(x.pm?' (ap.-midi)':''):'—';
+const planCfg=()=>{const p=(S.cfg&&S.cfg.plan)||{};return{model:p.model||PLAN0,off:p.off||[],order:p.order||{}}};
+function planEligible(ph,t){const ids=Object.values(Z).filter(z=>z.kind==='LOG'&&z.tower===t).map(z=>z.id).sort();return ph==='P2'?ids.filter(id=>attrs(id).sdb):ids}
+function planIds(ph,t){const el=planEligible(ph,t),set=new Set(el),o=(planCfg().order[ph+'|'+t]||[]).filter(id=>set.has(id));return o.concat(el.filter(id=>!o.includes(id)))}
+function planComp(){const c=planCfg();const key=JSON.stringify([c,Object.values(Z).filter(z=>z.kind==='LOG'&&attrs(z.id).sdb).map(z=>z.id)]);if(S.pc&&S.pc.key===key)return S.pc;
+ let comp=null,err=null;try{comp=TP.compute(c.model,c.off)}catch(e){err=e.message}const L={},byLog={};
+ if(comp)for(const ph of PH)for(const t of Object.keys(TOW)){const r=TP.logements(c.model,comp,ph,t,planIds(ph,t));L[ph+'|'+t]=r;if(r)for(const x of r.list)(byLog[x.id]||(byLog[x.id]={}))[ph]=x}
+ S.pc={key,comp,L,byLog,err,model:c.model};return S.pc}
+function interOf(ph){const g=INTER[PH.indexOf(ph)];return g?g.t.map(id=>TPL.LOG.find(t=>t.id===id)).filter(Boolean):[]}
+function planState(id,ph,x){const ts=interOf(ph).filter(t=>!(isSdb(t)&&!attrs(id).sdb));const r=aggT(id,ts);const T=todayIso();
+ if(r.n&&r.p>=1)return{c:'#2e9e5b',l:'Terminé',r};if(x&&T>x.e.d)return r.nr===r.n?{c:'#7a0010',l:'Échéance dépassée · non relevé',r}:{c:'#d6331f',l:'En retard · '+pct(r.p),r};
+ if(x&&T>=x.s.d)return{c:'#2b6cff',l:'En cours · '+(r.nr===r.n?'non relevé':pct(r.p)),r};return{c:'#8a8f98',l:'À venir',r}}
+function vPlanning(){
+ const P=planComp();if(P.err)return `<div class="card"><p>Planning illisible : ${esc(P.err)}</p></div>`;const adm=prof.role==='admin';const t=S.plT||'D',ph=S.plP||'';const c=planCfg();
+ const head=`<div class="bar"><div class="seg">${['D','C','B','A'].map(x=>`<button class="chip" data-plt="${x}" aria-pressed="${x===t}">Tour ${x}</button>`).join('')}</div><div class="seg"><button class="chip" data-plp="" aria-pressed="${!ph}">Toutes les interventions</button>${PH.map(p=>`<button class="chip" data-plp="${p}" aria-pressed="${p===ph}">${esc(PHN[p])}</button>`).join('')}</div></div>`;
+ const legend=`<div class="legend" style="margin:0 0 8px">${[['#8a8f98','À venir'],['#2b6cff','En cours'],['#2e9e5b','Terminé'],['#d6331f','En retard'],['#7a0010','Échéance dépassée, non relevé']].map(([c,l])=>`<span><i style="background:${c}"></i>${l}</span>`).join('')}</div>`;
+ let body='';
+ if(!ph){const ids=Object.values(Z).filter(z=>z.kind==='LOG'&&z.tower===t).map(z=>z.id).sort();
+  body=`<div class="scroll"><table class="pl"><thead><tr><th>Logement</th><th>Niveau</th>${PH.map(p=>`<th>${esc(PHN[p])}<br><span class="tw">${(l=>l?fdl({d:l.tower.s})+' → '+fdl({d:l.tower.e}):'')(P.L[p+'|'+t])}</span></th>`).join('')}</tr></thead><tbody>${ids.map(id=>`<tr><td><a href="#planning" data-z="${id}">${id}</a></td><td>${niv(Z[id].lvl)}</td>${PH.map(p=>{const x=(P.byLog[id]||{})[p];if(!x)return `<td class="tw">${p==='P2'?(attrs(id).sdbConf==='renovee'?'SdB déjà rénovée':'—'):'—'}</td>`;const s=planState(id,p,x);return `<td><span class="pd2" style="background:${s.c}"></span>${fd(x.s)} → ${fd(x.e)}<br><span class="tw">${esc(s.l)}</span></td>`}).join('')}</tr>`).join('')}</tbody></table></div>`}
+ else{const L=P.L[ph+'|'+t];if(!L)body='<p class="mute">Pas de tâche pour cette tour dans le planning.</p>';else{
+  const warn=L.qte&&L.qte!==L.list.length?`<div class="amw">Le planning prévoit ${L.qte} logements pour cette tour ; ${L.list.length} sont concernés dans l’outil${ph==='P2'?' (logements avec réfection de salle de bain)':''}.</div>`:'';
+  body=`<p class="mute">Tour ${t} · ${esc(L.main.label)} · prévu du <b>${fdl({d:L.tower.s})}</b> au <b>${fdl({d:L.tower.e})}</b> · cadence ${String(Math.round(L.cad*10)/10).replace('.',',')} j.o. par logement · dernier logement fini le <b>${L.list.length?fdl(L.list[L.list.length-1].e):'—'}</b></p>${warn}
+  ${adm?`<p class="note">Ordre de passage : ↑ ↓ pour déplacer un logement, ⇅ sur deux logements pour les inverser. Les dates se recalculent aussitôt.</p>`:''}
+  <div class="scroll"><table class="pl"><thead><tr><th>#</th><th>Logement</th><th>Niveau</th><th>Début</th><th>Fin</th><th>Entreprises</th><th>État</th>${adm?'<th></th>':''}</tr></thead><tbody>${L.list.map((x,k)=>{const s=planState(x.id,ph,x);return `<tr class="${S.swap===x.id?'swsel':''}"><td>${k+1}</td><td><a href="#planning" data-z="${x.id}">${x.id}</a></td><td>${niv(Z[x.id].lvl)}</td><td>${fdl(x.s)}</td><td>${fdl(x.e)}</td><td class="tw">${x.steps.map(st=>`${esc(st.ent)} ${fd(st.s)}→${fd(st.e)}`).join('<br>')}</td><td><span class="pd2" style="background:${s.c}"></span>${esc(s.l)}</td>${adm?`<td style="white-space:nowrap"><button class="btn" data-pmv="${x.id}|-1" aria-label="Monter">↑</button><button class="btn" data-pmv="${x.id}|1" aria-label="Descendre">↓</button><button class="btn ${S.swap===x.id?'on':''}" data-psw="${x.id}" aria-label="Inverser">⇅</button></td>`:''}</tr>`}).join('')}</tbody></table></div>
+  ${adm&&c.order[ph+'|'+t]?`<button class="btn" id="pordR" style="margin-top:8px">Revenir à l’ordre par numéro</button>`:''}`}}
+ const offs=c.off.slice().sort((a,b)=>a.d.localeCompare(b.d));
+ const offUI=`<div class="card" style="margin-top:14px"><h2>Jours non travaillés</h2><p class="mute">Ils décalent automatiquement toutes les dates qui suivent. ${c.model.feries.length} jours fériés repris du fichier de planning.</p>
+  ${offs.length?`<table class="stack"><thead><tr><th>Du</th><th>Au</th><th>Type</th><th>Concerne</th><th>Note</th>${adm?'<th></th>':''}</tr></thead><tbody>${offs.map((o,i)=>`<tr><td>${fdl({d:o.d})}</td><td>${fdl({d:o.f||o.d})}</td><td>${esc(OFFT[o.type]||o.type)}</td><td>${esc(o.ent||'Tout le chantier')}</td><td>${esc(o.note||'')}</td>${adm?`<td><button class="btn" data-poff="${esc(o.d+'|'+(o.f||'')+'|'+(o.ent||'')+'|'+o.type)}">Retirer</button></td>`:''}</tr>`).join('')}</tbody></table>`:'<p class="mute">Aucun jour ajouté.</p>'}
+  ${adm?`<form id="offF" class="grid2" style="gap:8px;margin-top:10px"><label>Du<input type="date" id="oD" required></label><label>Au (facultatif)<input type="date" id="oF"></label><label>Type<select class="f" id="oT">${Object.entries(OFFT).map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}</select></label><label>Concerne<select class="f" id="oE"><option value="">Tout le chantier</option>${(c.model.ents||[]).map(e=>`<option value="${esc(e.code)}">${esc(e.nom||e.code)}</option>`).join('')}</select></label><label>Note<input type="text" id="oN" placeholder="ex. congés de Noël"></label><button class="btn pri" type="submit" style="align-self:end">Ajouter</button></form>`:''}
+  <details style="margin-top:10px"><summary>Jours fériés du fichier</summary><p class="tw">${c.model.feries.map(f=>fdl({d:f.d})+' '+esc(f.label)).join(' · ')}</p></details></div>`;
+ const imp=adm?`<div class="card" style="margin-top:14px"><h2>Fichier de planning</h2><p class="mute">Source : ${esc(c.model===PLAN0?'Le Treuil – Planning travaux 25 (version intégrée)':'import du '+fdl({d:(c.model.imported||'').slice(0,10)}))}. Importez une nouvelle version : l’ordre de passage et les jours non travaillés sont conservés.</p><label class="btn" style="display:inline-flex;align-items:center;gap:6px;width:max-content">Importer le planning (Excel)<input type="file" id="plI" accept=".xlsx,.xls" style="display:none"></label><div id="plMsg" class="note"></div></div>`:'';
+ return `<div class="card">${head}${legend}${body}</div>${offUI}${imp}`;
+}
+async function savePlan(patch){const c=planCfg();const plan={...((S.cfg&&S.cfg.plan)||{}),...patch};const nc={...S.cfg,plan};const {error}=await sb.from('config').update({data:nc}).eq('id',1);if(error){toast('Non enregistré : '+errMsg(error));return false}S.cfg=nc;S.pc=null;render();return true}
 function vSynth(){
  const sub=`<div class="bar seg" role="group" aria-label="Type de synthèse"><button class="chip" data-sy="glob" aria-pressed="${S.sy!=='log'}">Synthèse globale</button><button class="chip" data-sy="log" aria-pressed="${S.sy==='log'}">Intérieur des logements</button></div>`;
  return sub+(S.sy==='log'?vSynthLog():vSynthGlob());
@@ -400,7 +443,7 @@ function groupedTasks(id,z,a){const all=TPL[z.kind].filter(t=>!(isSdb(t)&&!a.sdb
  const used=new Set(groups.flatMap(g=>g.ts.map(t=>t.id)));const rest=all.filter(t=>!used.has(t.id));if(rest.length)groups.push({n:'Autres tâches',ts:rest});
  for(const g of groups){if(!g.ts.length)continue;const gk=g.n||'';const byE=new Map();for(const t of g.ts){const e=entOfTask(t);if(!byE.has(e))byE.set(e,[]);byE.get(e).push(t)}
   const open=!g.n||S.igOpen.has(gk)||g.ts.some(t=>t.id===S.edit);
-  if(g.n){const r=aggT(id,g.ts);out.push({h:`<button class="ig" data-ig="${esc(gk)}" aria-expanded="${open}"><span><b>${esc(g.n)}</b><br><span class="igs">${esc([...byE.keys()].join(' · '))} · ${r.nr} non relevée(s) sur ${r.n}</span></span><span class="igp">${r.n&&r.nr===r.n?'—':pct(r.p)} <span aria-hidden="true">${open?'▾':'▸'}</span></span></button>`})}
+  if(g.n){const r=aggT(id,g.ts);out.push({h:`<button class="ig" data-ig="${esc(gk)}" aria-expanded="${open}"><span><b>${esc(g.n)}</b><br><span class="igs">${(x=>x?'Prévu du '+fd(x.s)+' au '+fd(x.e)+' · ':'')(z.kind==='LOG'?(planComp().byLog[id]||{})[PH[INTER.findIndex(q=>q.n===g.n)]]:null)}${esc([...byE.keys()].join(' · '))} · ${r.nr} non relevée(s) sur ${r.n}</span></span><span class="igp">${r.n&&r.nr===r.n?'—':pct(r.p)} <span aria-hidden="true">${open?'▾':'▸'}</span></span></button>`})}
   if(!open)continue;
   for(const [e,ts] of byE){const r=aggT(id,ts);out.push({h:`<div class="eg">${esc(e)} <span class="tw">· ${r.n&&r.nr===r.n?'non relevé':pct(r.p)}</span></div>`});for(const t of ts)out.push({t})}}
  return out}
@@ -478,6 +521,12 @@ document.addEventListener('click',async e=>{
   for(const r of rows)(S.docs[r.zone_id]||(S.docs[r.zone_id]={t:{},h:[]})).attrs=r.data;toast(ids.length+' logement(s) avec réfection de salle de bain.');render();return}
  if(b.dataset.ush){const id=b.dataset.ush,box=$('#pw-'+CSS.escape(id));const {data,error}=await sb.rpc('admin_get_code',{p_id:id});if(error){toast(errMsg(error));return}
   box.innerHTML=data?`<div class="amw" style="margin-top:6px">Code actuel : <b style="font-size:20px;letter-spacing:3px">${esc(data)}</b></div>`:`<div class="amw" style="margin-top:6px">Code inconnu (attribué avant cette fonction). Utilisez « Changer le code » pour en définir un nouveau.</div>`;clearTimeout(box._t);box._t=setTimeout(()=>{if(box.isConnected)box.innerHTML=''},30000);return}
+ if(b.dataset.plt){S.plT=b.dataset.plt;render();return}
+ if(b.dataset.plp!==undefined){S.plP=b.dataset.plp;S.swap=null;render();return}
+ if(b.dataset.pmv){const [id,d]=b.dataset.pmv.split('|');const ph=S.plP,t=S.plT||'D';const ids=planIds(ph,t);const i=ids.indexOf(id),j=i+(+d);if(j<0||j>=ids.length)return;[ids[i],ids[j]]=[ids[j],ids[i]];await savePlan({order:{...planCfg().order,[ph+'|'+t]:ids}});return}
+ if(b.dataset.psw){const id=b.dataset.psw;if(!S.swap||S.swap===id){S.swap=S.swap===id?null:id;render();return}const ph=S.plP,t=S.plT||'D';const ids=planIds(ph,t);const i=ids.indexOf(S.swap),j=ids.indexOf(id);S.swap=null;if(i<0||j<0){render();return}[ids[i],ids[j]]=[ids[j],ids[i]];await savePlan({order:{...planCfg().order,[ph+'|'+t]:ids}});toast('Logements inversés.');return}
+ if(b.id==='pordR'){const o={...planCfg().order};delete o[S.plP+'|'+(S.plT||'D')];await savePlan({order:o});return}
+ if(b.dataset.poff){const [d,f,e,ty]=b.dataset.poff.split('|');await savePlan({off:planCfg().off.filter(o=>!(o.d===d&&(o.f||'')===f&&(o.ent||'')===e&&o.type===ty))});return}
  if(b.dataset.tmv){const [i,d]=b.dataset.tmv.split('|').map(Number);const a=S.te.inter;if(a[i+d]){[a[i],a[i+d]]=[a[i+d],a[i]]}render();return}
  if(b.dataset.tdi){S.te.inter.splice(+b.dataset.tdi,1);render();return}
  if(b.dataset.tmt){const [i,j,d]=b.dataset.tmt.split('|').map(Number);const a=S.te.inter[i].ts;if(a[j+d]){[a[j],a[j+d]]=[a[j+d],a[j]]}else if(S.te.inter[i+d]){const [t]=a.splice(j,1);d<0?S.te.inter[i+d].ts.push(t):S.te.inter[i+d].ts.unshift(t)}render();return}
@@ -536,6 +585,7 @@ document.addEventListener('change',async e=>{const el=e.target;
  if(el.id==='amChk'){putCfg({...S.cfg,amCheck:el.checked});return}
  if(el.id==='aMen'){const v=Math.max(1,Math.min(12,parseInt(el.value)||1));saveAttrs(S.open,{men:v});return}
  if(el.id==='aAm'){saveAttrs(S.open,{am:el.value});return}
+ if(el.id==='plI'){const f=el.files[0];if(!f)return;const o=$('#plMsg');o.textContent='Lecture…';try{const X=await loadXlsx();const wb=X.read(await f.arrayBuffer(),{cellDates:false});const m=TP.parseWorkbook(X,wb);if(!m.tasks.length)throw new Error('aucune tâche trouvée');TP.compute(m,[]);if(await savePlan({model:m}))toast('Planning importé : '+m.tasks.length+' tâches, '+m.feries.length+' jours fériés.')}catch(x){o.textContent='Fichier illisible : '+errMsg(x)}el.value='';return}
  if(el.id==='xlI'){const f=el.files[0];if(!f)return;const o=$('#xlOut');o.textContent='Lecture…';try{const {res,unk}=await readSurvey(f);S.xl=res;const todo=res.filter(r=>r.st&&r.st!=='renovee'),ok=res.filter(r=>r.st==='renovee'),none=res.filter(r=>!r.st||r.st==='autre');
   o.innerHTML=`<div class="amw" style="margin-top:8px"><b>${res.length} logements trouvés</b> : ${todo.length} réfection(s) à faire, ${ok.length} déjà rénovée(s), ${none.length} sans réponse exploitable.${unk.length?' Lignes ignorées : '+esc(unk.join(', '))+'.':''}<br><b>À rénover :</b> ${esc(todo.map(r=>r.id).join(', '))||'aucun'}<br><b>Déjà rénovées :</b> ${esc(ok.map(r=>r.id).join(', '))||'aucune'}${none.length?'<br><b>Sans réponse :</b> '+esc(none.map(r=>r.id).join(', ')):''}</div><div class="btns" style="margin-top:6px"><button class="btn pri" id="xlGo">Appliquer à ces ${todo.length+ok.length} logements</button></div>`}catch(x){o.textContent='Fichier illisible : '+errMsg(x)}el.value='';return}
  if(el.id==='aSdb'){saveAttrs(S.open,{sdb:el.checked});return}
@@ -545,10 +595,11 @@ document.addEventListener('change',async e=>{const el=e.target;
 });
 document.addEventListener('input',e=>{if(e.target.id==='rng'&&S.draft){S.draft.st='v';S.draft.v=+e.target.value;$('#pv').textContent=S.draft.v+' %'}if(e.target.id==='cm'&&S.draft)S.draft.c=e.target.value});
 document.addEventListener('submit',async e=>{e.preventDefault();
+ if(e.target.id==='offF'){const d=$('#oD').value,f=$('#oF').value;if(!d)return;if(f&&f<d){toast('La date de fin est avant la date de début.');return}await savePlan({off:planCfg().off.concat([{d,f:f||'',type:$('#oT').value,ent:$('#oE').value,note:$('#oN').value.trim().slice(0,80)}])});toast('Jours non travaillés ajoutés.');return}
  if(e.target.id==='entF'){const nom=$('#eN').value.trim(),pin=$('#eP').value.trim();if(!/^\d{4}$/.test(pin)){$('#entMsg').textContent='Le code doit comporter 4 chiffres.';return}const {error}=await sb.rpc('admin_create_entreprise',{p_nom:nom,p_pin:pin,p_role:$('#eR').value,p_lots:parseLots($('#eL').value),p_taches:parseTaches($('#eT').value)});if(error){$('#entMsg').textContent=errMsg(error);return}await loadEnt();render();const m=$('#entMsg');if(m){m.innerHTML=`<div class="amw">« ${esc(nom)} » créée avec le code <b>${esc(pin)}</b>. Notez-le et transmettez-le à l’entreprise.</div>`}return}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.open)closeSheet()});
-window.addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(v&&v!==S.view&&['plan','synth','amiante','hist','export','reglages','activite'].includes(v)){S.view=v;render()}});
+window.addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(v&&v!==S.view&&['plan','planning','synth','amiante','hist','export','reglages','activite'].includes(v)){S.view=v;render()}});
 
 function loadXlsx(){return new Promise((res,rej)=>{if(window.XLSX)return res(window.XLSX);const sc=document.createElement('script');sc.src='lib/xlsx.mini.min.js';sc.onload=()=>res(window.XLSX);sc.onerror=rej;document.head.appendChild(sc)})}
 const nrm=x=>String(x??'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim();
