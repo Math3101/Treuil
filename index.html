@@ -128,7 +128,7 @@ label.chk input{width:22px;height:22px;flex:none}
 <body>
 <header>
   <img class="logo" src="logo-h.png" alt="GBMP Bâtiment" width="76" height="48">
-  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v27</span></span></div>
+  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v28</span></span></div>
   <div class="who" id="who"></div>
 </header>
 <nav role="tablist" id="tabs" hidden>
@@ -146,8 +146,8 @@ label.chk input{width:22px;height:22px;flex:none}
 <div class="toast" id="toast" role="status"></div>
 <script src="config.js"></script>
 <script src="lib/supabase.js"></script>
-<script src="data.js?v=27"></script>
-<script src="lib/planning.js?v=27"></script>
+<script src="data.js?v=28"></script>
+<script src="lib/planning.js?v=28"></script>
 <script>
 {
 /* ---------- Référentiel ---------- */
@@ -345,7 +345,7 @@ function vPlanGantt(){
  // logements : tours dans l'ordre du planning, puis ordre de passage
  const tows=['D','C','B','A'];const rows=[];for(const t of tows){const ord=S.plP?planIds(S.plP,t):planIds('P1',t);const ids=ord.filter(id=>phs.some(ph=>(P.byLog[id]||{})[ph]));if(ids.length)rows.push({t,ids})}
  const all=[];for(const id in P.byLog)for(const ph of phs){const x=P.byLog[id][ph];if(x)for(const st of x.steps){all.push(st.s.d,st.e.d)}}if(!all.length)return '<p class="mute">Aucune intervention.</p>';all.sort();
- const first=TP.isoToNum(monday(all[0])),last=TP.isoToNum(all[all.length-1]);const cols=[],ci=new Map();for(let n=first;n<=last;n++){const wd=new Date(n*86400000).getUTCDay();if(wd===0||wd===6)continue;ci.set(n,cols.length);cols.push(n)}
+ const first=Math.min(TP.isoToNum(monday(all[0])),TP.isoToNum('2026-11-23')),last=TP.isoToNum(all[all.length-1]);const cols=[],ci=new Map();for(let n=first;n<=last;n++){const wd=new Date(n*86400000).getUTCDay();if(wd===0||wd===6)continue;ci.set(n,cols.length);cols.push(n)}
  const W=cols.length*DW;
  const off=new Map();for(const f of c.model.feries)off.set(f.d,f.label||'Jour férié');for(const o of c.off)if(!o.ent){let n=TP.isoToNum(o.d);const e=TP.isoToNum(o.f||o.d);for(;n<=e;n++)off.set(TP.numToIso(n),(OFFT[o.type]||o.type))}
  // en-têtes
@@ -364,7 +364,7 @@ function vPlanGantt(){
  <div class="gleft">${left}</div><div class="gbody" style="width:${W}px">${bg}${body}</div></div>
  <p class="note">Une ligne par logement, dans l’ordre de passage : les barres forment l’escalier de chaque intervention. Barre fine : plusieurs entreprises dans le même logement (salle de bain). Touchez une barre ou un numéro pour ouvrir la fiche.</p>`;
 }
-function planScrollToday(){const sc=$('#gtScroll');if(!sc)return;const t=sc.querySelector('.gtoday');if(sc.classList.contains('gantt')){const dd=[...sc.querySelectorAll('.gdd')];const T=todayIso();const mon=monday(T);let x=t?parseFloat(t.style.left)-60:0;if(!t){const k=dd.findIndex(e=>e.title&&false);x=0}sc.scrollLeft=Math.max(0,x);S.plSL=sc.scrollLeft;return}const T=todayIso();const ths=[...sc.querySelectorAll('th[data-d]')];const th=ths.find(x=>x.dataset.d>=monday(T))||ths[0];const c0=sc.querySelector('.gc0');if(th)sc.scrollLeft=Math.max(0,th.offsetLeft-(c0?c0.offsetWidth:0));S.plSL=sc.scrollLeft}
+function planScrollToday(){const sc=$('#gtScroll');if(!sc)return;const t=sc.querySelector('.gtoday');if(sc.classList.contains('gantt')){const dd=[...sc.querySelectorAll('.gdd')];const T=todayIso();const mon=monday(T);const cw=sc.querySelector('.gw.cur');let x=cw?parseFloat(cw.style.left):(t?parseFloat(t.style.left)-60:0);if(!t){const k=dd.findIndex(e=>e.title&&false);x=0}sc.scrollLeft=Math.max(0,x);S.plSL=sc.scrollLeft;return}const T=todayIso();const ths=[...sc.querySelectorAll('th[data-d]')];const th=ths.find(x=>x.dataset.d>=monday(T))||ths[0];const c0=sc.querySelector('.gc0');if(th)sc.scrollLeft=Math.max(0,th.offsetLeft-(c0?c0.offsetWidth:0));S.plSL=sc.scrollLeft}
 function vPlanGrid(){
  const P=planComp();const towers=['D','C','B','A'],phs=S.plP?[S.plP]:PH;const T=todayIso(),c=planCfg();
  const D=planDays(towers,phs);if(!D.size)return '<p class="mute">Aucune intervention sur cette sélection.</p>';
