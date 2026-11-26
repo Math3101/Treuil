@@ -1,6 +1,6 @@
 -- =====================================================================
 -- Suivi d'avancement · Résidence Le Treuil · GBMP
--- Script de mise en place Supabase · version 2 (connexion entreprise + code)
+-- Script de mise en place Supabase · version 3 (entreprise + code, droits par tâche, salle de bain)
 -- À coller dans SQL Editor puis Run. Peut être relancé sans risque :
 -- il ne supprime aucun relevé.
 -- AVANT DE LANCER : remplacez 1234 par votre code administrateur à 4 chiffres
@@ -20,6 +20,7 @@ create table if not exists public.profiles (
 );
 alter table public.profiles add column if not exists actif boolean not null default true;
 alter table public.profiles add column if not exists last_login timestamptz;
+alter table public.profiles add column if not exists taches text[] not null default '{}';
 
 -- Codes et mots de passe techniques : jamais lisibles depuis l'application
 create table if not exists public.entreprise_secrets (
@@ -94,7 +95,8 @@ insert into public.task_lots (task_id, lot) values
  ('SS1','01'),('SS2','13A'),('SS3','13A'),('SS4','12'),
  ('T1','04'),('T2','13A'),
  ('F1','05'),('F2','06'),('F3','01'),('F4','13A'),('F5','05'),('F6','05'),
- ('X1','15'),('X2','16'),('X3','01')
+ ('X1','15'),('X2','16'),('X3','01'),
+ ('SB1','10'),('SB2','11'),('SB3','10'),('SB4','13B'),('SB5','13B'),('SB6','13B'),('SB7','13B')
 on conflict (task_id) do update set lot = excluded.lot;
 
 -- ---------- Fonctions d'aide (droits) ----------
@@ -105,6 +107,10 @@ $$ select coalesce((select case when actif then role else 'attente' end from pub
 create or replace function public.my_lots() returns text[]
 language sql stable security definer set search_path = public as
 $$ select coalesce((select case when actif then lots else '{}' end from public.profiles where id = auth.uid()), '{}') $$;
+
+create or replace function public.my_taches() returns text[]
+language sql stable security definer set search_path = public as
+$$ select coalesce((select case when actif then taches else '{}' end from public.profiles where id = auth.uid()), '{}') $$;
 
 create or replace function public.is_active() returns boolean
 language sql stable security definer set search_path = public as
@@ -207,7 +213,8 @@ $$ begin
   end if;
 end $$;
 
-create or replace function public.admin_create_entreprise(p_nom text, p_pin text, p_role text, p_lots text[]) returns uuid
+drop function if exists public.admin_create_entreprise(text, text, text, text[]);
+create or replace function public.admin_create_entreprise(p_nom text, p_pin text, p_role text, p_lots text[], p_taches text[] default '{}') returns uuid
 language plpgsql security definer set search_path = public, extensions as
 $$
 declare uid uuid := gen_random_uuid(); em text; sec text := encode(extensions.gen_random_bytes(24), 'hex');
@@ -226,7 +233,7 @@ begin
     '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', '');
   insert into auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
   values (gen_random_uuid(), uid, jsonb_build_object('sub', uid::text, 'email', em, 'email_verified', true), 'email', uid::text, now(), now(), now());
-  insert into public.profiles (id, email, nom, role, lots) values (uid, em, trim(p_nom), p_role, coalesce(p_lots, '{}'));
+  insert into public.profiles (id, email, nom, role, lots, taches) values (uid, em, trim(p_nom), p_role, coalesce(p_lots, '{}'), coalesce(p_taches, '{}'));
   insert into public.entreprise_secrets (id, code_hash, secret) values (uid, extensions.crypt(p_pin, extensions.gen_salt('bf')), sec);
   insert into public.journal (profile_id, nom, action, detail) values (auth.uid(), (select nom from public.profiles where id = auth.uid()), 'création entreprise', trim(p_nom));
   return uid;
@@ -242,13 +249,14 @@ $$ begin
   insert into public.journal (profile_id, nom, action, detail) values (auth.uid(), (select nom from public.profiles where id = auth.uid()), 'changement de code', (select nom from public.profiles where id = p_id));
 end $$;
 
-create or replace function public.admin_update_entreprise(p_id uuid, p_nom text, p_role text, p_lots text[], p_actif boolean) returns void
+drop function if exists public.admin_update_entreprise(uuid, text, text, text[], boolean);
+create or replace function public.admin_update_entreprise(p_id uuid, p_nom text, p_role text, p_lots text[], p_actif boolean, p_taches text[] default '{}') returns void
 language plpgsql security definer set search_path = public as
 $$ begin
   perform public.assert_admin();
   if p_id = auth.uid() and (p_role <> 'admin' or not p_actif) then raise exception 'Vous ne pouvez pas retirer vos propres droits d''administrateur.'; end if;
   if p_role not in ('admin', 'saisie', 'cons') then raise exception 'Rôle invalide.'; end if;
-  update public.profiles set nom = trim(p_nom), role = p_role, lots = coalesce(p_lots, '{}'), actif = p_actif where id = p_id;
+  update public.profiles set nom = trim(p_nom), role = p_role, lots = coalesce(p_lots, '{}'), taches = coalesce(p_taches, '{}'), actif = p_actif where id = p_id;
   if not p_actif then
     begin delete from auth.sessions where user_id = p_id; exception when others then null; end;
   end if;
@@ -282,8 +290,8 @@ revoke all on function public.pin_login(uuid, text) from public;
 grant execute on function public.list_entreprises() to anon, authenticated;
 grant execute on function public.pin_login(uuid, text) to anon, authenticated;
 do $g$ declare f text; begin
-  foreach f in array array['public.admin_create_entreprise(text,text,text,text[])','public.admin_set_pin(uuid,text)',
-    'public.admin_update_entreprise(uuid,text,text,text[],boolean)','public.admin_activite()','public.assert_admin()','public.check_pin(text,uuid)'] loop
+  foreach f in array array['public.admin_create_entreprise(text,text,text,text[],text[])','public.admin_set_pin(uuid,text)',
+    'public.admin_update_entreprise(uuid,text,text,text[],boolean,text[])','public.admin_activite()','public.assert_admin()','public.check_pin(text,uuid)'] loop
     execute 'revoke all on function ' || f || ' from public, anon';
     execute 'grant execute on function ' || f || ' to authenticated';
   end loop;
@@ -323,7 +331,7 @@ drop policy if exists p_rel_insert on public.releves;
 drop policy if exists p_rel_delete on public.releves;
 create policy p_rel_read   on public.releves for select to authenticated using (public.is_active());
 create policy p_rel_insert on public.releves for insert to authenticated
-  with check (public.my_role() = 'admin' or (public.my_role() = 'saisie' and lot = any(public.my_lots())));
+  with check (public.my_role() = 'admin' or (public.my_role() = 'saisie' and (lot = any(public.my_lots()) or task_id = any(public.my_taches()))));
 create policy p_rel_delete on public.releves for delete to authenticated using (public.my_role() = 'admin');
 
 drop policy if exists p_cfg_read  on public.config;
@@ -353,5 +361,5 @@ do $$ begin
   end if;
 end $$;
 
--- Vérification : 43 tâches et au moins 1 entreprise.
+-- Vérification : 50 tâches et au moins 1 entreprise.
 select (select count(*) from public.task_lots) as nb_taches, (select count(*) from public.list_entreprises()) as nb_entreprises;
