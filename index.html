@@ -73,6 +73,13 @@ main{padding:14px max(3vw,12px) 80px;max-width:1300px;margin:0 auto}
 .amb ul{margin:4px 0 0;padding-left:18px}
 .ig{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:var(--ink);color:var(--bg);padding:10px 12px;border-radius:8px;margin:8px 0 6px;font-size:15px;min-height:52px}.igs{font-size:12px;opacity:.8;font-weight:400}.igp{font-weight:700;white-space:nowrap}.eg{font-weight:700;font-size:14px;margin:8px 0 6px;padding-left:8px;border-left:4px solid var(--red)}
 .cad td,.cad th{padding:5px 6px;white-space:nowrap;vertical-align:top;border-bottom:1px solid var(--line)}.cad input,.cad select{padding:6px;font-size:15px}
+.gantt{position:relative;display:grid;grid-template-columns:var(--lw) max-content;max-height:75vh;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.gcorner{position:sticky;top:0;left:0;z-index:4;background:var(--card);border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:12px;font-weight:700;padding:6px}
+.ghead{position:sticky;top:0;z-index:3;background:var(--card);height:46px;border-bottom:1px solid var(--line)}.gwr,.gdr{position:relative;height:23px}.gw{position:absolute;top:0;height:23px;background:var(--ink);color:var(--bg);font-size:11px;font-weight:700;padding:4px 4px;white-space:nowrap;overflow:hidden;border-right:1px solid var(--card)}.gw.cur{background:var(--red);color:#fff}
+.gdd{position:absolute;top:0;height:23px;font-size:10px;text-align:center;line-height:23px;color:var(--mute)}.gdd.mon{border-left:1px solid var(--line)}.gdd.today{background:var(--red);color:#fff;font-weight:700}
+.gleft{position:sticky;left:0;z-index:2;background:var(--card);border-right:1px solid var(--line)}.glab{display:flex;align-items:center;gap:4px;height:24px;padding:0 6px;font-size:12px;font-weight:700;text-decoration:none;color:var(--ink);border-bottom:1px solid #00000010;white-space:nowrap}.gtw,.gtwb{height:24px;background:var(--bg);font-weight:700;font-size:12px;padding:4px 6px;border-bottom:1px solid var(--line)}
+.gbody{position:relative}.grow{position:relative;height:24px;border-bottom:1px solid #00000010}.gb{position:absolute;border-radius:3px;display:block}.gb.late{outline:2px solid #d6331f;z-index:1}.gb.done{opacity:.45}
+.goff{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(45deg,transparent 0 4px,#00000014 4px 8px)}.gmon{position:absolute;top:0;bottom:0;border-left:1px solid #00000018}.gtoday{position:absolute;top:0;bottom:0;border-left:2px solid var(--red);z-index:2}
 #gtScroll{max-height:75vh;overflow:auto}.gt{border-collapse:separate;border-spacing:0}.gt thead th{position:sticky;top:0;z-index:1}.gt thead tr:nth-child(2) th{top:31px}.gt thead .gc0{z-index:3}.gt th,.gt td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:4px;vertical-align:top}.gt td{min-width:64px;width:64px}.gt .gc0{position:sticky;left:0;z-index:2;background:var(--card);text-align:left;min-width:120px;white-space:nowrap}.gt .gwk{background:var(--ink);color:var(--bg);text-align:left;white-space:nowrap}.gt .gwk.cur{background:var(--red);color:#fff}.gt .gd{font-size:12px;text-align:center;white-space:nowrap;font-weight:600}.gt .today{background:#fff4c2;color:#111}.gt .offd{background:repeating-linear-gradient(45deg,transparent 0 6px,#00000012 6px 12px)}.pnav{display:flex;gap:6px}.gshort{display:none}@media(max-width:600px){#main .chip{padding:6px 10px;font-size:14px;min-height:38px}.pnav .btn{padding:6px 12px}.gt td{min-width:56px;width:56px;padding:2px}.gt th{padding:3px 2px}.gt .gc0{min-width:62px;max-width:62px;white-space:normal;font-size:12px;padding:3px 4px}.gt .gd{font-size:11px}.gfull,.gm{display:none}.gshort{display:inline}.lcv{font-size:11px;padding:2px 2px}.lcv small{font-size:9px}.gt .gwk{font-size:12px}}
 .gcol{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}.lcv{display:block;margin:0 0 3px;min-width:0}
 .dyt{min-width:640px}.dyt th,.dyt td{vertical-align:top;padding:5px 8px;border-bottom:1px solid var(--line)}.dyt th.dy{white-space:nowrap;width:96px;font-weight:600}.dyt tr.wkh th{background:var(--ink);color:var(--bg);text-align:left;padding:7px 10px;position:sticky;left:0}.dyt tr.wkh.cur th{background:var(--red);color:#fff}.dyt tr.today th.dy,.dyt tr.today td{background:#fff4c2;color:#111}.dyt tr.offd th,.dyt tr.offd td{background:repeating-linear-gradient(45deg,transparent 0 6px,#0000000d 6px 12px)}.dline{display:inline-block;margin:0 10px 2px 0}.en2{font-weight:700;font-size:11px;margin-right:4px}.lc small{font-weight:400;font-size:10px}@media(max-width:600px){.dyt{min-width:0}.dyt.stack td{padding-inline-start:0}.dyt.stack td::before{float:none;display:block;width:auto;margin:0 0 2px;font-weight:700;color:var(--ink);font-size:12px}.dyt th.dy{display:block;width:auto;border:0;padding:8px 0 2px}}
@@ -121,7 +128,7 @@ label.chk input{width:22px;height:22px;flex:none}
 <body>
 <header>
   <img class="logo" src="logo-h.png" alt="GBMP Bâtiment" width="76" height="48">
-  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v24</span></span></div>
+  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v25</span></span></div>
   <div class="who" id="who"></div>
 </header>
 <nav role="tablist" id="tabs" hidden>
@@ -139,8 +146,8 @@ label.chk input{width:22px;height:22px;flex:none}
 <div class="toast" id="toast" role="status"></div>
 <script src="config.js"></script>
 <script src="lib/supabase.js"></script>
-<script src="data.js?v=24"></script>
-<script src="lib/planning.js?v=24"></script>
+<script src="data.js?v=25"></script>
+<script src="lib/planning.js?v=25"></script>
 <script>
 {
 /* ---------- Référentiel ---------- */
@@ -332,7 +339,32 @@ function planDays(towers,phs){const P=planComp();const D=new Map();
   const half=(n===a&&st.s.pm)?'pm':(n===e&&!st.e.pm)?'am':'';if(!D.has(d))D.set(d,{});const c=D.get(d);(c[ph]||(c[ph]=new Map()));const m=c[ph];if(!m.has(st.ent))m.set(st.ent,new Map());const prev=m.get(st.ent).get(x.id);m.get(st.ent).set(x.id,prev===undefined?half:(prev===half?half:''))}}}
  return D}
 const JOURS=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
-function planScrollToday(){const sc=$('#gtScroll');if(!sc)return;const T=todayIso();const ths=[...sc.querySelectorAll('th[data-d]')];const th=ths.find(x=>x.dataset.d>=monday(T))||ths[0];const c0=sc.querySelector('.gc0');if(th)sc.scrollLeft=Math.max(0,th.offsetLeft-(c0?c0.offsetWidth:0));S.plSL=sc.scrollLeft}
+function vPlanGantt(){
+ const P=planComp();const phs=S.plP?[S.plP]:PH;const T=todayIso(),c=planCfg();
+ const DW=innerWidth<600?14:20,RH=24,LW=innerWidth<600?64:92;
+ // logements : tours dans l'ordre du planning, puis ordre de passage
+ const tows=['D','C','B','A'];const rows=[];for(const t of tows){const ord=S.plP?planIds(S.plP,t):planIds('P1',t);const ids=ord.filter(id=>phs.some(ph=>(P.byLog[id]||{})[ph]));if(ids.length)rows.push({t,ids})}
+ const all=[];for(const id in P.byLog)for(const ph of phs){const x=P.byLog[id][ph];if(x)for(const st of x.steps){all.push(st.s.d,st.e.d)}}if(!all.length)return '<p class="mute">Aucune intervention.</p>';all.sort();
+ const first=TP.isoToNum(monday(all[0])),last=TP.isoToNum(all[all.length-1]);const cols=[],ci=new Map();for(let n=first;n<=last;n++){const wd=new Date(n*86400000).getUTCDay();if(wd===0||wd===6)continue;ci.set(n,cols.length);cols.push(n)}
+ const W=cols.length*DW;
+ const off=new Map();for(const f of c.model.feries)off.set(f.d,f.label||'Jour férié');for(const o of c.off)if(!o.ent){let n=TP.isoToNum(o.d);const e=TP.isoToNum(o.f||o.d);for(;n<=e;n++)off.set(TP.numToIso(n),(OFFT[o.type]||o.type))}
+ // en-têtes
+ let wkH='',dyH='',bg='';let i=0;while(i<cols.length){const m=monday(TP.numToIso(cols[i]));let j=i;while(j<cols.length&&monday(TP.numToIso(cols[j]))===m)j++;wkH+=`<div class="gw${m===monday(T)?' cur':''}" style="left:${i*DW}px;width:${(j-i)*DW}px">S${isoWeek(m)} · ${m.slice(8,10)}/${m.slice(5,7)}/${m.slice(2,4)}</div>`;i=j}
+ cols.forEach((n,k)=>{const d=TP.numToIso(n);const wd=new Date(n*86400000).getUTCDay();dyH+=`<div class="gdd${d===T?' today':''}${wd===1?' mon':''}" style="left:${k*DW}px;width:${DW}px" title="${esc(JOURS[wd]+' '+d.slice(8,10)+'/'+d.slice(5,7)+(off.has(d)?' · '+off.get(d):''))}">${+d.slice(8,10)}</div>`;if(off.has(d))bg+=`<div class="goff" style="left:${k*DW}px;width:${DW}px" title="${esc(off.get(d))}"></div>`;if(wd===1)bg+=`<div class="gmon" style="left:${k*DW}px"></div>`});
+ const tk=ci.get(TP.isoToNum(T));if(tk!=null)bg+=`<div class="gtoday" style="left:${tk*DW+DW/2}px"></div>`;
+ // barres
+ const bar=(id,ph,st,lane,nl)=>{const C=P.comp.calFor(st.ent);let a=TP.isoToNum(st.s.d),e=TP.isoToNum(st.e.d);const segs=[];let cur=null;for(let n=a;n<=e;n++){if(!C.isWork(n)||!ci.has(n)){cur=null;continue}const k=ci.get(n);let l=k*DW,r=(k+1)*DW;if(n===a&&st.s.pm)l+=DW/2;if(n===e&&!st.e.pm)r-=DW/2;if(cur&&cur.r===l)cur.r=r;else{cur={l,r};segs.push(cur)}}
+  const x=(P.byLog[id]||{})[ph];const s2=planState(id,ph,x);const late=s2.l.startsWith('En retard')||s2.l.startsWith('Échéance');const h=Math.max(4,Math.floor((RH-4)/nl));
+  return segs.map(g=>`<a href="#planning" data-z="${id}" class="gb${late?' late':''}${s2.l==='Terminé'?' done':''}" style="left:${g.l}px;width:${Math.max(3,g.r-g.l-1)}px;top:${2+lane*h}px;height:${h-1}px;background:${entC(st.ent)}" title="${esc(id+' · '+st.ent+' · '+PHN[ph]+' · '+fd(st.s)+' → '+fd(st.e)+' · '+s2.l)}"></a>`).join('')};
+ let left='',body='';for(const g of rows){left+=`<div class="gtw">Tour ${g.t}</div>`;body+=`<div class="gtwb" style="width:${W}px"></div>`;
+  for(const id of g.ids){const z=Z[id];left+=`<a href="#planning" data-z="${id}" class="glab">${id}<span class="tw"> ${niv(z.lvl)}</span></a>`;let bars='';for(const ph of phs){const x=(P.byLog[id]||{})[ph];if(!x)continue;x.steps.forEach((st,k)=>{bars+=bar(id,ph,st,k,x.steps.length)})}body+=`<div class="grow" style="width:${W}px">${bars}</div>`}}
+ const ents=[];for(const ph of phs)for(const x of (P.model.tpl||[]).filter(q=>q.phase===ph))if(!ents.includes(x.ent))ents.push(x.ent);
+ return `<div class="bar"><button class="btn" id="plToday">Aller à aujourd’hui</button><div class="legend" style="margin:0">${ents.map(e=>`<span><i style="background:${entC(e)}"></i>${esc(e)}</span>`).join('')}<span><i style="background:#fff;outline:2px solid #d6331f"></i>en retard</span><span><i style="background:#999;opacity:.45"></i>terminé</span></div></div>
+ <div class="gantt" id="gtScroll" style="--lw:${LW}px"><div class="gcorner">Logement</div><div class="ghead" style="width:${W}px"><div class="gwr">${wkH}</div><div class="gdr">${dyH}</div></div>
+ <div class="gleft">${left}</div><div class="gbody" style="width:${W}px">${bg}${body}</div></div>
+ <p class="note">Une ligne par logement, dans l’ordre de passage : les barres forment l’escalier de chaque intervention. Barre fine : plusieurs entreprises dans le même logement (salle de bain). Touchez une barre ou un numéro pour ouvrir la fiche.</p>`;
+}
+function planScrollToday(){const sc=$('#gtScroll');if(!sc)return;const t=sc.querySelector('.gtoday');if(sc.classList.contains('gantt')){const dd=[...sc.querySelectorAll('.gdd')];const T=todayIso();const mon=monday(T);let x=t?parseFloat(t.style.left)-60:0;if(!t){const k=dd.findIndex(e=>e.title&&false);x=0}sc.scrollLeft=Math.max(0,x);S.plSL=sc.scrollLeft;return}const T=todayIso();const ths=[...sc.querySelectorAll('th[data-d]')];const th=ths.find(x=>x.dataset.d>=monday(T))||ths[0];const c0=sc.querySelector('.gc0');if(th)sc.scrollLeft=Math.max(0,th.offsetLeft-(c0?c0.offsetWidth:0));S.plSL=sc.scrollLeft}
 function vPlanGrid(){
  const P=planComp();const towers=['D','C','B','A'],phs=S.plP?[S.plP]:PH;const T=todayIso(),c=planCfg();
  const D=planDays(towers,phs);if(!D.size)return '<p class="mute">Aucune intervention sur cette sélection.</p>';
@@ -375,7 +407,7 @@ function vPlanning(){
  <div class="legend" style="margin:0 0 10px">${[...ents].sort().map(e=>`<span><i style="background:${entC(e)}"></i>${esc(e)}</span>`).join('')}<span><i style="background:#fff;outline:3px solid #d6331f"></i>en retard</span><span>✓ terminé</span></div>`;
  const rows=weeks.map(([w,c])=>{const fri=TP.numToIso(TP.isoToNum(w)+4);return `<tr class="${w===cw?'cur':''}"><th class="wk">S${isoWeek(w)}<br><span class="tw">${w.slice(8,10)}/${w.slice(5,7)} → ${fri.slice(8,10)}/${fri.slice(5,7)}/${fri.slice(2,4)}</span>${w===cw?'<br><span class="tw" style="color:var(--red);font-weight:700">cette semaine</span>':''}</th>${phs.map(ph=>{const m=c[ph];if(!m)return '<td></td>';const ord=(P.model.tpl||[]).filter(x=>x.phase===ph).map(x=>x.ent);return `<td>${[...m.entries()].sort((a,b)=>(ord.indexOf(a[0])+99*(ord.indexOf(a[0])<0))-(ord.indexOf(b[0])+99*(ord.indexOf(b[0])<0))).map(([e,set])=>`<div class="eline"><span class="en" style="color:${entC(e)}">${esc(e)}</span> ${[...set].sort((a,b)=>a.localeCompare(b)).map(id=>chip(id,ph,e)).join('')}</div>`).join('')}</td>`}).join('')}</tr>`}).join('');
  const adm=prof.role==='admin';
- return `<div class="card">${head.replace(/<div class="legend"[\s\S]*$/,'').replace(/<label class="chk" style="margin-left:auto">[\s\S]*?<\/label>/,'')}${vPlanGrid()}<div class="btns" style="margin-top:8px"><button class="btn" data-plm="ordre">${adm?'Ordre de passage et détail par logement':'Détail par logement'}</button></div></div>${vPlanCad()}${vPlanOff()}${vPlanImp()}`;
+ return `<div class="card">${head.replace(/<div class="legend"[\s\S]*$/,'').replace(/<label class="chk" style="margin-left:auto">[\s\S]*?<\/label>/,'')}${vPlanGantt()}<div class="btns" style="margin-top:8px"><button class="btn" data-plm="ordre">${adm?'Ordre de passage et détail par logement':'Détail par logement'}</button></div></div>${vPlanCad()}${vPlanOff()}${vPlanImp()}`;
  if(S.plV==='jour')return `<div class="card">${head.replace(/<div class="legend"[\s\S]*$/,'')}${vPlanDays()}<div class="btns" style="margin-top:8px"><button class="btn" data-plm="ordre">${adm?'Ordre de passage et détail par logement':'Détail par logement'}</button></div></div>${vPlanCad()}${vPlanOff()}${vPlanImp()}`;
  return `<div class="card">${head}<div class="scroll"><table class="wkt stack"><thead><tr><th>Semaine</th>${phs.map(p=>`<th>${esc(PHN[p])}</th>`).join('')}</tr></thead><tbody>${rows||`<tr><td colspan="${phs.length+1}">Aucune intervention ${S.plPast?'':'à venir '}sur cette sélection.</td></tr>`}</tbody></table></div>
  <p class="note">Chaque pastille est un logement, de la couleur de l’entreprise qui y intervient cette semaine-là. Touchez-la pour ouvrir la fiche.</p>
