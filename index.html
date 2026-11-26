@@ -120,7 +120,7 @@ label.chk input{width:22px;height:22px;flex:none}
 <body>
 <header>
   <img class="logo" src="logo-h.png" alt="GBMP Bâtiment" width="76" height="48">
-  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v19</span></span></div>
+  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v20</span></span></div>
   <div class="who" id="who"></div>
 </header>
 <nav role="tablist" id="tabs" hidden>
@@ -138,8 +138,8 @@ label.chk input{width:22px;height:22px;flex:none}
 <div class="toast" id="toast" role="status"></div>
 <script src="config.js"></script>
 <script src="lib/supabase.js"></script>
-<script src="data.js?v=19"></script>
-<script src="lib/planning.js?v=19"></script>
+<script src="data.js?v=20"></script>
+<script src="lib/planning.js?v=20"></script>
 <script>
 {
 /* ---------- Référentiel ---------- */
@@ -331,7 +331,7 @@ function planDays(towers,phs){const P=planComp();const D=new Map();
  return D}
 const JOURS=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
 function vPlanGrid(){
- const P=planComp();const towers=S.plT?[S.plT]:['D','C','B','A'],phs=S.plP?[S.plP]:PH;const T=todayIso(),c=planCfg();
+ const P=planComp();const towers=['D','C','B','A'],phs=S.plP?[S.plP]:PH;const T=todayIso(),c=planCfg();
  const D=planDays(towers,phs);if(!D.size)return '<p class="mute">Aucune intervention sur cette sélection.</p>';
  const days=[...D.keys()].sort();const first=TP.isoToNum(monday(days[0])),last=TP.isoToNum(days[days.length-1]);
  const NW=S.plNW||3;if(S.plW0==null){const cw=TP.isoToNum(monday(T));S.plW0=Math.min(Math.max(cw,first),TP.isoToNum(monday(days[days.length-1])))}
@@ -363,18 +363,17 @@ function vPlanDays(){
 }
 function vPlanning(){
  const P=planComp();if(P.err)return `<div class="card"><p>Planning illisible : ${esc(P.err)}</p></div>`;
- if(S.plMode==='ordre')return `<div class="bar"><button class="btn" data-plm="">← Retour au planning par semaine</button></div>`+vPlanningOld();
+ if(S.plMode==='ordre')return `<div class="bar"><button class="btn" data-plm="">← Retour au planning</button></div>`+vPlanningOld();
  const towers=S.plT?[S.plT]:['D','C','B','A'],phs=S.plP?[S.plP]:PH;const T=todayIso(),cw=monday(T);
  let weeks=planWeeks(towers,phs);if(!S.plPast)weeks=weeks.filter(([w])=>w>=cw);
  const ents=new Set();for(const [,c] of weeks)for(const k in c)for(const e of c[k].keys())ents.add(e);
  const chip=(id,ph,e)=>{const x=(P.byLog[id]||{})[ph];const s=planState(id,ph,x);const late=s.l.startsWith('En retard')||s.l.startsWith('Échéance');const done=s.l==='Terminé';return `<a href="#planning" data-z="${id}" class="lc" style="background:${entC(e)};color:${entTxt(e)};${late?'outline:3px solid #d6331f;outline-offset:1px':''}" title="${esc(id+' · '+e+' · '+s.l)}">${id}${done?' ✓':''}</a>`};
- const head=`<div class="bar"><div class="seg"><button class="chip" data-plt="" aria-pressed="${!S.plT}">Toutes les tours</button>${['D','C','B','A'].map(x=>`<button class="chip" data-plt="${x}" aria-pressed="${x===S.plT}">Tour ${x}</button>`).join('')}</div></div>
- <div class="bar"><div class="seg"><button class="chip" data-plp="" aria-pressed="${!S.plP}">Toutes les interventions</button>${PH.map(p=>`<button class="chip" data-plp="${p}" aria-pressed="${p===S.plP}">${esc(PHN[p])}</button>`).join('')}</div><label class="chk" style="margin-left:auto"><input type="checkbox" id="plPast" ${S.plPast?'checked':''}> Semaines passées</label></div>
- <div class="bar seg"><button class="chip" data-plv="" aria-pressed="${!S.plV}">Jours × entreprises</button><button class="chip" data-plv="jour" aria-pressed="${S.plV==='jour'}">Liste par jour</button><button class="chip" data-plv="sem" aria-pressed="${S.plV==='sem'}">Par semaine</button></div>
+ const head=`<div class="bar"><div class="seg"><button class="chip" data-plp="" aria-pressed="${!S.plP}">Toutes les interventions</button>${PH.map(p=>`<button class="chip" data-plp="${p}" aria-pressed="${p===S.plP}">${esc(PHN[p])}</button>`).join('')}</div><label class="chk" style="margin-left:auto"><input type="checkbox" id="plPast" ${S.plPast?'checked':''}> Semaines passées</label></div>
+ 
  <div class="legend" style="margin:0 0 10px">${[...ents].sort().map(e=>`<span><i style="background:${entC(e)}"></i>${esc(e)}</span>`).join('')}<span><i style="background:#fff;outline:3px solid #d6331f"></i>en retard</span><span>✓ terminé</span></div>`;
  const rows=weeks.map(([w,c])=>{const fri=TP.numToIso(TP.isoToNum(w)+4);return `<tr class="${w===cw?'cur':''}"><th class="wk">S${isoWeek(w)}<br><span class="tw">${w.slice(8,10)}/${w.slice(5,7)} → ${fri.slice(8,10)}/${fri.slice(5,7)}/${fri.slice(2,4)}</span>${w===cw?'<br><span class="tw" style="color:var(--red);font-weight:700">cette semaine</span>':''}</th>${phs.map(ph=>{const m=c[ph];if(!m)return '<td></td>';const ord=(P.model.tpl||[]).filter(x=>x.phase===ph).map(x=>x.ent);return `<td>${[...m.entries()].sort((a,b)=>(ord.indexOf(a[0])+99*(ord.indexOf(a[0])<0))-(ord.indexOf(b[0])+99*(ord.indexOf(b[0])<0))).map(([e,set])=>`<div class="eline"><span class="en" style="color:${entC(e)}">${esc(e)}</span> ${[...set].sort((a,b)=>a.localeCompare(b)).map(id=>chip(id,ph,e)).join('')}</div>`).join('')}</td>`}).join('')}</tr>`}).join('');
  const adm=prof.role==='admin';
- if(!S.plV)return `<div class="card">${head.replace(/<div class="legend"[\s\S]*$/,'').replace(/<label class="chk" style="margin-left:auto">[\s\S]*?<\/label>/,'')}${vPlanGrid()}<div class="btns" style="margin-top:8px"><button class="btn" data-plm="ordre">${adm?'Ordre de passage et détail par logement':'Détail par logement'}</button></div></div>${vPlanCad()}${vPlanOff()}${vPlanImp()}`;
+ return `<div class="card">${head.replace(/<div class="legend"[\s\S]*$/,'').replace(/<label class="chk" style="margin-left:auto">[\s\S]*?<\/label>/,'')}${vPlanGrid()}<div class="btns" style="margin-top:8px"><button class="btn" data-plm="ordre">${adm?'Ordre de passage et détail par logement':'Détail par logement'}</button></div></div>${vPlanCad()}${vPlanOff()}${vPlanImp()}`;
  if(S.plV==='jour')return `<div class="card">${head.replace(/<div class="legend"[\s\S]*$/,'')}${vPlanDays()}<div class="btns" style="margin-top:8px"><button class="btn" data-plm="ordre">${adm?'Ordre de passage et détail par logement':'Détail par logement'}</button></div></div>${vPlanCad()}${vPlanOff()}${vPlanImp()}`;
  return `<div class="card">${head}<div class="scroll"><table class="wkt stack"><thead><tr><th>Semaine</th>${phs.map(p=>`<th>${esc(PHN[p])}</th>`).join('')}</tr></thead><tbody>${rows||`<tr><td colspan="${phs.length+1}">Aucune intervention ${S.plPast?'':'à venir '}sur cette sélection.</td></tr>`}</tbody></table></div>
  <p class="note">Chaque pastille est un logement, de la couleur de l’entreprise qui y intervient cette semaine-là. Touchez-la pour ouvrir la fiche.</p>
@@ -386,16 +385,16 @@ function vPlanCad(){
  const ts=M.tasks.filter(t=>PH.includes(t.phase)&&t.tour);const num=(v,k,i,st)=>adm?`<input type="number" min="0" step="${st}" data-cad="${i}|${k}" value="${v==null?'':esc(v)}" style="width:74px">`:esc(v==null?'':String(v).replace('.',','));
  const row=t=>{const i=M.tasks.indexOf(t);const r=comp.res.get(t.n);const cad=(t.jo||1)/Math.max(1,t.eq||1);const n=planEligible(t.phase,t.tour).length;const pred=t.pred!=null?M.tasks.find(x=>x.n===t.pred):null;
   return `<tr><td>${esc(PHN[t.phase]||t.phase)}</td><td>${esc(t.ent)}</td><td>${esc(t.tour)}</td><td>${num(t.qte,'qte',i,1)}${n!==t.qte?`<br><span class="tw">${n} dans l’outil</span>`:''}</td><td>${num(t.jo,'jo',i,0.1)}</td><td>${num(t.eq,'eq',i,0.1)}</td><td class="n"><b>${String(Math.round(cad*100)/100).replace('.',',')}</b></td><td class="n">${comp.dur(t)}</td><td>${pred?`après ${esc(pred.ent)} ${esc(pred.tour)} <span class="tw">(${t.lien}${t.dec?(t.dec>0?' +':' ')+t.dec+' j':''})</span>${adm?`<br>${num(t.dec,'dec',i,1)} <span class="tw">j de décalage</span>`:''}`:adm?`<input type="date" data-cad="${i}|imp" value="${t.imp!=null?TP.numToIso(t.imp):''}">`:(t.imp!=null?fdl({d:TP.numToIso(t.imp)}):'')}</td><td>${r?fdl({d:TP.numToIso(r.s)})+' → '+fdl({d:TP.numToIso(r.e)}):'—'}</td></tr>`};
- const tpl=(M.tpl||[]).map((x,i)=>`<tr><td>${esc(PHN[x.phase]||x.phase)}</td><td>${esc(x.label)}</td><td>${esc(x.ent)}</td><td>${adm?`<input type="number" min="0.5" step="0.5" data-tpl="${i}|dur" value="${esc(x.dur)}" style="width:70px">`:esc(String(x.dur).replace('.',','))}</td><td>${i&&(M.tpl[i-1]||{}).phase===x.phase?(adm?`<select class="f" data-tpl="${i}|lien" style="width:auto"><option value="DD" ${x.lien!=='FD'?'selected':''}>en même temps que l’étape précédente</option><option value="FD" ${x.lien==='FD'?'selected':''}>après la fin de l’étape précédente</option></select> + ${`<input type="number" step="0.5" data-tpl="${i}|dec" value="${esc(x.dec)}" style="width:60px">`} j`:(x.lien==='FD'?'après la fin':'en même temps')+(x.dec?' + '+x.dec+' j':'')):'début de l’intervention'}</td></tr>`).join('');
+ const tpl=(M.tpl||[]).map((x,i)=>`<tr><td>${esc(PHN[x.phase]||x.phase)}</td><td>${esc(x.label)}</td><td>${esc(x.ent)}</td><td class="tw">${['D','C','B','A'].map(t=>{const tk=M.tasks.find(k=>k.phase===x.phase&&k.tour===t&&k.ent===x.ent);return tk?t+' '+String(tk.jo||x.dur).replace('.',','):''}).filter(Boolean).join(' · ')||String(x.dur).replace('.',',')}</td><td>${i&&(M.tpl[i-1]||{}).phase===x.phase?(adm?`<select class="f" data-tpl="${i}|lien" style="width:auto"><option value="DD" ${x.lien!=='FD'?'selected':''}>en même temps que l’étape précédente</option><option value="FD" ${x.lien==='FD'?'selected':''}>après la fin de l’étape précédente</option></select> + ${`<input type="number" step="0.5" data-tpl="${i}|dec" value="${esc(x.dec)}" style="width:60px">`} j`:(x.lien==='FD'?'après la fin':'en même temps')+(x.dec?' + '+x.dec+' j':'')):'début de l’intervention'}</td></tr>`).join('');
  return `<details class="card" style="margin-top:14px" ${S.cadEd||S.cadOpen?'open':''}><summary><b>Cadences et durées</b> <span class="tw">· comment les dates sont calculées</span></summary>
  <div class="amw" style="margin:10px 0">
- <b>Cadence</b> = jours ouvrés par logement ÷ nombre d’équipes. Avec 1,2 j par logement et 1 équipe, un nouveau logement démarre toutes les 1,2 journées.<br>
+ <b>J.O. par logement</b> = temps passé par l’entreprise dans chaque logement : avec 2, la pastille du logement apparaît sur 2 jours.<br><b>Cadence</b> = J.O. par logement ÷ nombre d’équipes : avec 2 j et 2 équipes, un nouveau logement démarre chaque jour ; avec 2 j et 1 équipe, tous les 2 jours.<br>
  <b>Durée d’une tour</b> = nombre de logements × jours par logement ÷ équipes, arrondie au jour supérieur. Par exemple, 32 × 1,2 ÷ 1 = 38,4, soit 39 jours ouvrés.<br>
  <b>Début</b> : date imposée, ou enchaînement après une autre tâche (FD = à la fin, DD = en même temps, FF = finir ensemble), avec un décalage éventuel en jours.<br>
- <b>Dans un logement</b> : les étapes s’enchaînent selon le second tableau, ce qui donne la durée de passage d’un logement.<br>
+ <b>Dans un logement</b> : le second tableau dit quand chaque entreprise démarre par rapport à la première (en même temps + x jours, ou après la fin).<br>
  Les week-ends, les jours fériés et les jours non travaillés sont toujours sautés.</div>
  <h3>Par tour</h3><div class="scroll"><table class="cad"><thead><tr><th>Intervention</th><th>Entreprise</th><th>Tour</th><th>Nb logements</th><th>J.O. par logement</th><th>Équipes</th><th class="n">Cadence (j.o./logt)</th><th class="n">Durée tour (j.o.)</th><th>Début</th><th>Dates calculées</th></tr></thead><tbody>${ts.map(row).join('')}</tbody></table></div>
- <h3 style="margin-top:14px">Dans un logement</h3><div class="scroll"><table class="cad"><thead><tr><th>Intervention</th><th>Étape</th><th>Entreprise</th><th>Durée (j.o.)</th><th>Démarre</th></tr></thead><tbody>${tpl}</tbody></table></div>
+ <h3 style="margin-top:14px">Dans un logement</h3><div class="scroll"><table class="cad"><thead><tr><th>Intervention</th><th>Étape</th><th>Entreprise</th><th>Durée par logement (j.o.)<br><span class="tw">= « J.O. par logement » ci-dessus</span></th><th>Démarre</th></tr></thead><tbody>${tpl}</tbody></table></div>
  ${adm?`<div class="btns" style="margin-top:10px"><button class="btn pri" id="cadSave" ${S.cadEd?'':'disabled'}>Enregistrer les cadences</button><button class="btn" id="cadCancel" ${S.cadEd?'':'disabled'}>Annuler</button><button class="btn" id="cadReset">Revenir aux valeurs du fichier</button></div><p class="note">Les dates calculées se mettent à jour pendant la saisie ; le planning n’est modifié qu’après « Enregistrer ». Un nouvel import du fichier Excel remplace ces valeurs.</p>`:''}</details>`;
 }
 function vPlanOff(){const c=planCfg();const adm=prof.role==='admin';
