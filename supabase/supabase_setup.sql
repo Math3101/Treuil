@@ -1,6 +1,6 @@
 -- =====================================================================
 -- Suivi d'avancement · Résidence Le Treuil · GBMP
--- Script de mise en place Supabase · version 4 (entreprise + code, droits par tâche, salle de bain, affichage des codes)
+-- Script de mise en place Supabase · version 5 (entreprise + code, droits par tâche, salle de bain, codes, tâches modifiables)
 -- À coller dans SQL Editor puis Run. Peut être relancé sans risque :
 -- il ne supprime aucun relevé.
 -- AVANT DE LANCER : remplacez 1234 par votre code administrateur à 4 chiffres
@@ -331,6 +331,8 @@ create policy p_inv_admin on public.invitations for all to authenticated using (
 
 drop policy if exists p_tl_read on public.task_lots;
 create policy p_tl_read on public.task_lots for select to authenticated using (true);
+drop policy if exists p_tl_admin on public.task_lots;
+create policy p_tl_admin on public.task_lots for all to authenticated using (public.my_role() = 'admin') with check (public.my_role() = 'admin');
 
 drop policy if exists p_za_read  on public.zone_attrs;
 drop policy if exists p_za_write on public.zone_attrs;

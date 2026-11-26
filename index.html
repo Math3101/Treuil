@@ -72,6 +72,7 @@ main{padding:14px max(3vw,12px) 80px;max-width:1300px;margin:0 auto}
 .amb summary{cursor:pointer;min-height:28px}.amb summary b{display:inline}
 .amb ul{margin:4px 0 0;padding-left:18px}
 .ig{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:var(--ink);color:var(--bg);padding:10px 12px;border-radius:8px;margin:8px 0 6px;font-size:15px;min-height:52px}.igs{font-size:12px;opacity:.8;font-weight:400}.igp{font-weight:700;white-space:nowrap}.eg{font-weight:700;font-size:14px;margin:8px 0 6px;padding-left:8px;border-left:4px solid var(--red)}
+.tei{border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:12px}.te td,.te th{padding:4px;border:0}.te input[type=text]{min-width:200px;padding:8px}.te select.f{padding:8px;min-width:70px}.te .btn{min-height:38px;padding:4px 10px}
 .task{border:1px solid var(--line);border-radius:8px;margin-bottom:8px}
 .task>button{display:grid;grid-template-columns:44px minmax(0,1fr) 60px;gap:8px;align-items:center;width:100%;border:0;background:none;padding:10px;text-align:left;min-height:52px}
 .lot{font-size:12px;font-weight:700;background:var(--ink);color:var(--bg);border-radius:4px;padding:2px 4px;text-align:center}
@@ -180,7 +181,8 @@ const doc=id=>S.docs[id]||{};
 const attrs=id=>{const z=Z[id],a=doc(id).attrs||{};if(z.kind!=='LOG')return{am:z.pcam?'oui':'non',...a};const i=z.info;return{men:i.men,am:i.am,plomb:'nr',edl:'',...a}};
 function zoneAm(id){const z=Z[id];if(z.kind==='LOG'){const a=attrs(id);return{st:a.am,cats:a.am==='oui'?z.info.ac:[],mats:z.info.mt}}if(z.pcam)return{st:'oui',cats:z.kind==='HALL'?['faience']:['fc'],mats:z.pcam};return{st:'non',cats:[],mats:[]}}
 const TASKN={};for(const k in TPL)for(const t of TPL[k])TASKN[t.id]=t.label.replace(/^SdB · /,'SdB ').split(' (')[0];
-const isSdb=t=>t.id.startsWith('SB');
+TPL.LOG.forEach(t=>{if(t.id.startsWith('SB'))t.sdb=true});
+const isSdb=t=>!!t.sdb;
 function taskState(id,t){const s=(doc(id).t||{})[t.id];if(!s)return t.so&&!(isSdb(t)&&Z[id].kind==='LOG'&&attrs(id).sdb)?{st:'so'}:{st:'nr'};return s}
 function taskPct(id,t){const s=taskState(id,t);if(s.st==='so')return null;if(s.st!=='v')return{p:0,nr:true};if(t.mode==='count'){const m=Math.max(1,+attrs(id).men||1);return{p:Math.min(1,(+s.v||0)/m)}}if(t.mode==='bin')return{p:s.v?1:0};return{p:Math.min(1,(+s.v||0)/100)}}
 function agg(ids,lot){let W=0,P=0,n=0,nr=0;for(const id of ids)for(const t of TPL[Z[id].kind]){if(lot&&(Array.isArray(lot)?!lot.includes(t.lot):t.lot!==lot))continue;const r=taskPct(id,t);if(!r)continue;W+=t.w;P+=t.w*r.p;n++;if(r.nr)nr++}return{p:W?P/W:0,n,nr,W}}
@@ -215,7 +217,7 @@ async function loadAll(){
   let rows=[];for(let from=0;;from+=1000){const {data,error}=await sb.from('releves').select('*').order('at',{ascending:true}).order('id',{ascending:true}).range(from,from+999);if(error)throw error;rows=rows.concat(data);if(data.length<1000)break}
   const docs={};for(const r of rows){const d=docs[r.zone_id]||(docs[r.zone_id]={t:{},h:[]});const rec={st:r.st,v:r.v==null?null:+r.v,c:r.c||'',ph:r.photos||[],by:r.by,as:r.by_nom,at:r.at,amOk:r.am_ok};d.t[r.task_id]=rec;d.h.push({task:r.task_id,...rec})}
   for(const a of (za.data||[])){(docs[a.zone_id]||(docs[a.zone_id]={t:{},h:[]})).attrs=a.data||{}}
-  S.docs=docs;if(cf.data&&cf.data.data)S.cfg={...S.cfg,...cf.data.data};S.loaded=new Date();
+  S.docs=docs;if(cf.data&&cf.data.data)S.cfg={...S.cfg,...cf.data.data};applyTaskConfig();S.loaded=new Date();
   if(prof.role==='admin')await loadEnt();
   render();
  }catch(e){toast('Base de données injoignable : '+errMsg(e))}
@@ -262,7 +264,7 @@ function vPlan(){
  const img=`plans/${t}_${n===0?'rdc':'courant'}.png`;
  const polys=ids.map(id=>{const z=Z[id],r=agg([id]),am=zoneAm(id);const dim=(S.fAm&&am.st==='non')||(S.fNr&&r.nr===0);const pts=ZP[z.poly].map(p=>[p[0],p[1]*R]);const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length,cy=pts.reduce((s,p)=>s+p[1],0)/pts.length;
   const lab=z.kind==='LOG'?z.id:(z.kind==='HALL'?'Hall':'Palier');
-  const ra=roomAm(id);const ic=z.kind==='LOG'&&am.st==='oui'?Object.entries(ra).map(([room,v])=>{const [rx,ry]=roomXY(id,room);const ks=['S','V','P'].filter(k=>v.k.has(k));return ks.map((k,i)=>amSvg(k,rx-ks.length*.0145+i*.029,ry*R-.042,.026)).join('')}).join(''):am.st==='oui'?amSvg(z.kind==='HALL'?'V':'V',cx-.0145,cy-.09,.03):am.st==='verif'?`<text x="${(cx-.025).toFixed(3)}" y="${(cy-.04).toFixed(3)}" class="pc" style="fill:#555">?</text>`:'';
+  const ra=roomAm(id);const ic=z.kind==='LOG'&&am.st==='oui'?Object.entries(ra).map(([room,v])=>{const [rx,ry]=roomXY(id,room);const ks=['S','V','P'].filter(k=>v.k.has(k));return ks.map((k,i)=>amSvg(k,rx-ks.length*.0145+i*.029,ry*R-.042,.026)).join('')}).join(''):am.st==='oui'?amSvg('V',z.kind==='HALL'?.05:cx-.075,z.kind==='HALL'?.465*R:cy-.03,.03):am.st==='verif'?`<text x="${(cx-.025).toFixed(3)}" y="${(cy-.04).toFixed(3)}" class="pc" style="fill:#555">?</text>`:'';
   return `<polygon data-id="${id}" class="${S.sel===id?'sel':''} ${dim?'dim':''}" points="${pts.map(p=>p.join(',')).join(' ')}" fill="${col(r.p,r.nr,r.n)}"><title>${esc(z.name)} · ${pct(r.p)}</title></polygon>${ic}<text x="${cx.toFixed(3)}" y="${(cy+.005).toFixed(3)}">${lab}</text><text x="${cx.toFixed(3)}" y="${(cy+.05).toFixed(3)}" class="pc">${r.nr===r.n&&r.n?'—':pct(r.p)}</text>`}).join('');
  const tz=['ESC','ASC','SS','TOIT','F1','F2','F3','F4'].map(k=>{const id=t+'-'+k,r=agg([id]),am=zoneAm(id).st==='oui';return `<button class="chip" data-z="${id}">${am?'⚠ ':''}${esc(Z[id].name.split(' · ')[0])} · ${r.nr===r.n?'—':pct(r.p)}</button>`}).join('')+`<button class="chip" data-z="EXT">Extérieurs · ${pct(agg(['EXT']).p)}</button>`;
  const list=ids.map(id=>{const r=agg([id]);return `<div class="row"><a href="#plan" data-z="${id}">${esc(Z[id].kind==='LOG'?id+' · '+Z[id].info.typo:Z[id].name.split(' tour')[0])}</a><div class="meter"><i style="width:${r.p*100}%;background:${col(r.p,0,0)}"></i></div><b>${pct(r.p)}</b></div><div class="tw" style="margin:-4px 0 4px">${r.nr} tâche(s) non relevée(s) sur ${r.n}</div>`}).join('');
@@ -274,7 +276,7 @@ function vPlan(){
  <h3 style="margin-top:14px">Parties communes de la tour ${t}</h3><div class="tz">${tz}</div></div>
  <div class="card"><div class="mute">Tour ${t} · ${niv(n)}</div><div class="big">${pct(a.p)}</div><div class="mute" style="margin-bottom:10px">${a.nr} tâches non relevées sur ${a.n}</div><div class="rows">${list}</div></div></div>`;
 }
-const LOGLOTS=['06','01','13A','13B','12','08','10','11','GBMP'];
+let LOGLOTS=[];
 function dot(r){if(!r||!r.n)return '<span class="dot so" title="Sans objet"></span>';if(r.nr===r.n)return '<span class="dot" style="background:#c9ccd1" title="Non relevé"></span>';return `<span class="dot" style="background:${col(r.p,0,0)}" title="${pct(r.p)}"></span>`}
 function vSynth(){
  const sub=`<div class="bar seg" role="group" aria-label="Type de synthèse"><button class="chip" data-sy="glob" aria-pressed="${S.sy!=='log'}">Synthèse globale</button><button class="chip" data-sy="log" aria-pressed="${S.sy==='log'}">Intérieur des logements</button></div>`;
@@ -309,7 +311,7 @@ function vSynthGlob(){
  <p class="note">Moyennes pondérées par le poids des tâches. Une tâche non relevée compte pour 0 % ; une tâche « sans objet » est exclue du calcul.</p>`;
 }
 function vAm(){
- const lots=prof.role==='saisie'?prof.lots:LOTK;if(!S.amLot||!lots.includes(S.amLot))S.amLot=lots[0];
+ const lots=LOTK;if(!S.amLot||!lots.includes(S.amLot))S.amLot=(prof.role==='saisie'&&prof.lots[0])||lots[0];
  const L=S.amLot;const rows=[];
  for(const id of ALL){const am=zoneAm(id);if(am.st!=='oui')continue;const ts=TPL[Z[id].kind].filter(t=>t.lot===L&&t.am.some(c=>am.cats.includes(c)));if(!ts.length)continue;const r=agg([id],L);rows.push(`<tr><td><a href="#amiante" data-z="${id}">${esc(Z[id].kind==='LOG'?id+' · '+niv(Z[id].lvl):Z[id].name)}</a></td><td>${ts.map(t=>esc(t.label)).join('<br>')}</td><td>${am.cats.map(c=>esc(AMC[c])).join(', ')}</td><td class="n">${pct(r.p)}</td></tr>`)}
  const ver=Object.values(Z).filter(z=>z.kind==='LOG'&&attrs(z.id).am==='verif').map(z=>`<a href="#amiante" data-z="${z.id}">${z.id}</a>`).join(', ');
@@ -356,19 +358,41 @@ function vAct(){
  <div class="card" style="margin-top:14px"><div class="bar"><h2 style="margin:0">Journal</h2><select id="jEnt" class="f" style="max-width:260px;margin-left:auto"><option value="">Toutes les entreprises</option>${A.map(a=>`<option value="${esc(a.id)}" ${S.jEnt===a.id?'selected':''}>${esc(a.nom)}</option>`).join('')}</select></div>
  <div class="scroll"><table class="stack"><thead><tr><th>Date</th><th>Entreprise</th><th>Action</th><th>Détail</th></tr></thead><tbody>${J.slice(0,300).map(j=>`<tr><td>${fmtD(j.at)}</td><td>${esc(j.nom||'—')}</td><td>${esc(ICON[j.action]||j.action)}</td><td>${esc(j.detail||'')}</td></tr>`).join('')||'<tr><td colspan="4">Aucune activité.</td></tr>'}</tbody></table></div><p class="note">400 derniers évènements. Les relevés indiquent : logement · tâche · valeur.</p></div>`;
 }
+const AMOPT=[['S','sols','Sol'],['V','murs','Paroi verticale'],['P','plafond','Plafond']];
+const totW=ts=>ts.filter(t=>!t.sdb).reduce((a,t)=>a+(+t.w||0),0),totS=ts=>ts.filter(t=>t.sdb).reduce((a,t)=>a+(+t.w||0),0);
+const fmtN=n=>String(Math.round(n*100)/100).replace('.',',');
+function vTaskList(){return `<div class="card" style="grid-column:1/-1"><h2>Interventions et tâches des logements</h2>${INTER.map(g=>`<h3 style="margin-top:12px">${esc(g.n)}</h3><table class="stack"><thead><tr><th>Lot</th><th>Tâche</th><th class="n">Poids</th></tr></thead><tbody>${g.t.map(id=>TPL.LOG.find(t=>t.id===id)).filter(Boolean).map(t=>`<tr><td>${esc(t.lot)}</td><td>${esc(t.label)}${t.sdb?' (salle de bain)':''}</td><td class="n">${fmtN(t.w)}</td></tr>`).join('')}</tbody></table>`).join('')}<p class="note">Total d’un logement : ${fmtN(totW(TPL.LOG))} points, plus ${fmtN(totS(TPL.LOG))} points pour la réfection de salle de bain.</p></div>`}
+function vTaskEd(){
+ if(!S.te)S.te={inter:INTER.map(g=>({n:g.n,ts:g.t.map(id=>({...TPL.LOG.find(t=>t.id===id)}))}))};const E=S.te;const all=E.inter.flatMap(g=>g.ts);
+ const used=t=>Object.values(S.docs).filter(d=>d.t&&d.t[t.id]).length;
+ return `<div class="card" style="grid-column:1/-1"><h2>Interventions et tâches des logements</h2><p class="mute">Modifiez les noms, ajoutez ou supprimez des tâches, changez le lot, le type de relevé, le poids et l’amiante concerné. « SdB » : la tâche ne compte que pour les logements avec réfection de salle de bain. Rien n’est modifié tant que vous n’avez pas cliqué sur « Enregistrer ».</p>
+ ${E.inter.map((g,i)=>`<div class="tei"><div class="btns" style="align-items:center"><input type="text" data-tn="${i}" value="${esc(g.n)}" aria-label="Nom de l’intervention" style="flex:1;min-width:200px;font-weight:700"><button class="btn" data-tmv="${i}|-1" aria-label="Monter">↑</button><button class="btn" data-tmv="${i}|1" aria-label="Descendre">↓</button><button class="btn" data-tdi="${i}" ${g.ts.length?'disabled title="Videz d’abord l’intervention"':''}>Supprimer</button></div>
+  <div class="scroll"><table class="te"><thead><tr><th>Tâche</th><th>Lot</th><th>Relevé</th><th>Poids</th><th>Amiante</th><th>SdB</th><th></th></tr></thead><tbody>${g.ts.map((t,j)=>`<tr><td><input type="text" data-tf="${i}|${j}|label" value="${esc(t.label)}" aria-label="Nom de la tâche"></td><td><select class="f" data-tf="${i}|${j}|lot">${LOTK.map(l=>`<option ${l===t.lot?'selected':''}>${l}</option>`).join('')}</select></td><td><select class="f" data-tf="${i}|${j}|mode"><option value="pct" ${t.mode==='pct'?'selected':''}>%</option><option value="bin" ${t.mode==='bin'?'selected':''}>Fait / pas fait</option><option value="count" ${t.mode==='count'?'selected':''}>Nb menuiseries</option></select></td><td><input type="number" min="0" step="0.25" data-tf="${i}|${j}|w" value="${esc(t.w)}" style="width:80px"></td><td style="white-space:nowrap">${AMOPT.map(([k,c,l])=>`<label title="${l}" style="margin-right:6px"><input type="checkbox" data-tam="${i}|${j}|${c}" ${(t.am||[]).includes(c)||(c==='murs'&&(t.am||[]).includes('faience'))?'checked':''}> ${amBadge(k)}</label>`).join('')}</td><td><input type="checkbox" data-tf="${i}|${j}|sdb" ${t.sdb?'checked':''} aria-label="Salle de bain seulement"></td><td style="white-space:nowrap"><button class="btn" data-tmt="${i}|${j}|-1" aria-label="Monter">↑</button><button class="btn" data-tmt="${i}|${j}|1" aria-label="Descendre">↓</button><button class="btn" data-tdt="${i}|${j}" title="${used(t)?used(t)+' logement(s) ont déjà un relevé : ils seront conservés mais masqués':''}">✕</button></td></tr>`).join('')}</tbody></table></div>
+  <button class="btn" data-tat="${i}" style="margin-top:6px">+ Ajouter une tâche</button></div>`).join('')}
+ <div class="btns" style="margin-top:12px"><button class="btn" id="taI">+ Ajouter une intervention</button></div>
+ <p class="note">Total d’un logement : ${fmtN(totW(all))} points, plus ${fmtN(totS(all))} points pour la réfection de salle de bain.</p>
+ <div class="btns"><button class="btn pri" id="teSave">Enregistrer</button><button class="btn" id="teCancel">Annuler les modifications</button><button class="btn" id="teReset">Revenir à la liste d’origine</button></div><div id="teMsg" class="note"></div></div>`;
+}
 function vReg(){
  const adm=prof.role==='admin';
  return `<div class="grid2"><div class="card"><h2>Réglages</h2><label class="chk"><input type="checkbox" id="amChk" ${S.cfg.amCheck?'checked':''} ${adm?'':'disabled'}> Exiger la case « mode opératoire amiante appliqué » avant de saisir une tâche en zone amiantée</label>
  ${adm?`<h3 style="margin-top:14px">Importer l’enquête état des lieux (Excel)</h3><p class="mute">Lit seulement les colonnes « n° logement », « configuration SDB », « équipements sdb » et « Date de réponse ». « Déjà rénovée Claircienne » : rien à faire. « D’origine » ou « modifiée par locataire » : réfection à faire. Les noms des locataires ne sont ni lus ni enregistrés. Seuls les logements présents dans le fichier sont modifiés.</p><label class="btn" style="display:inline-flex;align-items:center;gap:6px;width:max-content">Choisir le fichier Excel<input type="file" id="xlI" accept=".xlsx,.xls" style="display:none"></label><div id="xlOut"></div>
  <h3 style="margin-top:14px">Logements avec réfection de salle de bain</h3><p class="mute">${Object.values(Z).filter(z=>z.kind==='LOG'&&attrs(z.id).sdb).length} logement(s) dans la liste. Collez la liste complète (ex. A01, A05, B12…) : elle remplace la précédente.</p><textarea id="sdbList">${Object.values(Z).filter(z=>z.kind==='LOG'&&attrs(z.id).sdb).map(z=>z.id).join(', ')}</textarea><div class="btns" style="margin-top:6px"><button class="btn pri" id="sdbGo">Appliquer la liste</button></div><div class="note" id="sdbMsg"></div>`:''}
  <p class="note">Données : Supabase${S.loaded?' · actualisées à '+S.loaded.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):''}.</p></div>
- <div class="card"><h2>Tâches et poids</h2><div class="scroll"><table class="stack"><thead><tr><th>Lot</th><th>Tâche (logement)</th><th>Relevé</th><th class="n">Poids</th></tr></thead><tbody>${TPL.LOG.map(t=>`<tr><td>${t.lot}</td><td>${esc(t.label)}${t.so?' (sans objet par défaut)':''}</td><td>${{count:'nb de menuiseries',pct:'%',bin:'fait / pas fait'}[t.mode]}</td><td class="n">${String(t.w).replace('.',',')}</td></tr>`).join('')}</tbody></table></div><p class="note">Total d’un logement : 16,5 points, plus 4 points pour la réfection de salle de bain (logements de la liste uniquement).</p></div>${adm?vUsers():''}</div>`;
+ ${adm?vTaskEd():vTaskList()}${adm?vUsers():''}</div>`;
 }
 
 /* ---------- Fiche ---------- */
 function openZone(id){S.sel=id;S.open=id;S.edit=null;S.draft=null;S.igOpen=new Set();$('#sheet').classList.add('open');render();const h=(doc(id).h||[]).map(x=>x.by);names(h)}
 function closeSheet(){S.open=null;S.sel=null;$('#sheet').classList.remove('open');render()}
-const INTER=[{n:'Intervention 1 · Remise en conformité électrique',t:['L7','L8']},{n:'Intervention 2 · Réfection de la salle de bain',t:['SB8','SB1','SB9','SB3','SB2','SB4','SB5','SB6','SB7']},{n:'Intervention 3 · Porte palière et menuiseries extérieures',t:['L11','L1']},{n:'Intervention 4 · Pose du MTA (chauffage, ventilation, robinetterie)',t:['L2','L3','L4','L9','L10','L5']}];
+let INTER=[{n:'Intervention 1 · Remise en conformité électrique',t:['L7','L8']},{n:'Intervention 2 · Réfection de la salle de bain',t:['SB8','SB1','SB9','SB3','SB2','SB4','SB5','SB6','SB7']},{n:'Intervention 3 · Porte palière et menuiseries extérieures',t:['L11','L1']},{n:'Intervention 4 · Pose du MTA (chauffage, ventilation, robinetterie)',t:['L2','L3','L4','L9','L10','L5']}];
+const INTER0=JSON.parse(JSON.stringify(INTER)),LOG0=JSON.parse(JSON.stringify(TPL.LOG));
+function applyTaskConfig(){const c=S.cfg||{};const ts=Array.isArray(c.logTasks)&&c.logTasks.length?c.logTasks:LOG0;const it=Array.isArray(c.inter)&&c.inter.length?c.inter:INTER0;
+ TPL.LOG=ts.map(t=>({id:String(t.id),lot:String(t.lot),label:String(t.label),mode:['pct','bin','count'].includes(t.mode)?t.mode:'pct',w:Math.max(0,+t.w||0),am:Array.isArray(t.am)?t.am.map(String):[],so:!!t.sdb,sdb:!!t.sdb}));
+ INTER=it.map(g=>({n:String(g.n),t:(g.t||[]).map(String).filter(id=>TPL.LOG.some(x=>x.id===id))}));
+ for(const k in TASKN)if(!TPL.PAL.concat(TPL.HALL,TPL.ESC,TPL.ASC,TPL.SS,TPL.TOIT,TPL.FAC,TPL.EXT).some(t=>t.id===k))delete TASKN[k];for(const t of TPL.LOG)TASKN[t.id]=t.label.replace(/^SdB · /,'SdB ').split(' (')[0];
+ const order=INTER.flatMap(g=>g.t).concat(TPL.LOG.map(t=>t.id));LOGLOTS=[...new Set(order.map(id=>(TPL.LOG.find(t=>t.id===id)||{}).lot).filter(Boolean))]}
+applyTaskConfig();
 function entOfTask(t){const byT=(S.ent||[]).filter(e=>(e.taches||[]).includes(t.id));if(byT.length)return byT.map(e=>e.nom).join(', ');const byL=(S.ent||[]).filter(e=>(e.lots||[]).includes(t.lot));return byL.length?byL.map(e=>e.nom).join(', '):'Lot '+t.lot+' · entreprise non attribuée'}
 function aggT(id,ts){let W=0,P=0,n=0,nr=0;for(const t of ts){const r=taskPct(id,t);if(!r)continue;W+=t.w;P+=t.w*r.p;n++;if(r.nr)nr++}return{p:W?P/W:0,n,nr}}
 function groupedTasks(id,z,a){const all=TPL[z.kind].filter(t=>!(isSdb(t)&&!a.sdb&&!(doc(id).t||{})[t.id]));const out=[];
@@ -454,6 +478,21 @@ document.addEventListener('click',async e=>{
   for(const r of rows)(S.docs[r.zone_id]||(S.docs[r.zone_id]={t:{},h:[]})).attrs=r.data;toast(ids.length+' logement(s) avec réfection de salle de bain.');render();return}
  if(b.dataset.ush){const id=b.dataset.ush,box=$('#pw-'+CSS.escape(id));const {data,error}=await sb.rpc('admin_get_code',{p_id:id});if(error){toast(errMsg(error));return}
   box.innerHTML=data?`<div class="amw" style="margin-top:6px">Code actuel : <b style="font-size:20px;letter-spacing:3px">${esc(data)}</b></div>`:`<div class="amw" style="margin-top:6px">Code inconnu (attribué avant cette fonction). Utilisez « Changer le code » pour en définir un nouveau.</div>`;clearTimeout(box._t);box._t=setTimeout(()=>{if(box.isConnected)box.innerHTML=''},30000);return}
+ if(b.dataset.tmv){const [i,d]=b.dataset.tmv.split('|').map(Number);const a=S.te.inter;if(a[i+d]){[a[i],a[i+d]]=[a[i+d],a[i]]}render();return}
+ if(b.dataset.tdi){S.te.inter.splice(+b.dataset.tdi,1);render();return}
+ if(b.dataset.tmt){const [i,j,d]=b.dataset.tmt.split('|').map(Number);const a=S.te.inter[i].ts;if(a[j+d]){[a[j],a[j+d]]=[a[j+d],a[j]]}else if(S.te.inter[i+d]){const [t]=a.splice(j,1);d<0?S.te.inter[i+d].ts.push(t):S.te.inter[i+d].ts.unshift(t)}render();return}
+ if(b.dataset.tdt){const [i,j]=b.dataset.tdt.split('|').map(Number);S.te.inter[i].ts.splice(j,1);render();return}
+ if(b.dataset.tat){const i=+b.dataset.tat;S.te.inter[i].ts.push({id:'U'+Date.now().toString(36).slice(-5).toUpperCase(),lot:'GBMP',label:'Nouvelle tâche',mode:'pct',w:1,am:[],sdb:false});render();return}
+ if(b.id==='taI'){S.te.inter.push({n:'Nouvelle intervention',ts:[]});render();return}
+ if(b.id==='teCancel'){S.te=null;render();return}
+ if(b.id==='teReset'){S.te={inter:INTER0.map(g=>({n:g.n,ts:g.t.map(id=>({...LOG0.find(t=>t.id===id)}))}))};render();toast('Liste d’origine chargée : cliquez sur Enregistrer pour l’appliquer.');return}
+ if(b.id==='teSave'){const E=S.te,msg=$('#teMsg');const ts=E.inter.flatMap(g=>g.ts);const ids=new Set();
+  for(const g of E.inter)if(!g.n.trim()){msg.textContent='Chaque intervention doit avoir un nom.';return}
+  for(const t of ts){if(!t.label.trim()){msg.textContent='Chaque tâche doit avoir un nom.';return}if(ids.has(t.id))t.id='U'+Math.random().toString(36).slice(2,7).toUpperCase();ids.add(t.id)}
+  if(!ts.some(t=>t.mode==='count'))msg.textContent='';
+  b.disabled=true;const {error:e1}=await sb.from('task_lots').upsert(ts.map(t=>({task_id:t.id,lot:t.lot})));if(e1){b.disabled=false;msg.textContent='Échec : '+errMsg(e1)+' (relancez la dernière version du script SQL).';return}
+  const c={...S.cfg,logTasks:ts.map(t=>({id:t.id,lot:t.lot,label:t.label.trim(),mode:t.mode,w:+t.w||0,am:t.am||[],sdb:!!t.sdb})),inter:E.inter.map(g=>({n:g.n.trim(),t:g.ts.map(t=>t.id)}))};
+  const {error}=await sb.from('config').update({data:c}).eq('id',1);b.disabled=false;if(error){msg.textContent='Échec : '+errMsg(error);return}S.cfg=c;S.te=null;applyTaskConfig();render();toast('Interventions et tâches enregistrées.');return}
  if(b.dataset.upw){const id=b.dataset.upw;$('#pw-'+CSS.escape(id)).innerHTML=`<div class="btns" style="margin-top:6px"><input type="text" id="npw" inputmode="numeric" maxlength="4" placeholder="Nouveau code" style="max-width:150px"><button class="btn" data-gen2="1">Générer</button><button class="btn pri" data-upws="${esc(id)}">Valider</button></div>`;return}
  if(b.dataset.gen2){$('#npw').value=rnd4();return}
  if(b.dataset.upws){const pin=$('#npw').value.trim();if(!/^\d{4}$/.test(pin)){toast('Le code doit comporter 4 chiffres.');return}const {error}=await sb.rpc('admin_set_pin',{p_id:b.dataset.upws,p_pin:pin});if(error){toast(errMsg(error));return}$('#pw-'+CSS.escape(b.dataset.upws)).innerHTML=`<div class="amw" style="margin-top:6px">Nouveau code : <b>${esc(pin)}</b>. Notez-le et transmettez-le à l’entreprise.</div>`;return}
@@ -486,6 +525,9 @@ document.addEventListener('click',async e=>{
 document.addEventListener('change',async e=>{const el=e.target;
  if(el.id==='exLot'){S.exLot=el.value;return}
  if(el.id==='entSel'){S.pinEnt=el.value||null;S.pin='';S.pinMsg='';S.pinBad=false;try{localStorage.setItem('treuil-ent',S.pinEnt||'')}catch(x){}render();return}
+ if(el.dataset.tf){const [i,j,f]=el.dataset.tf.split('|');const t=S.te.inter[+i].ts[+j];t[f]=el.type==='checkbox'?el.checked:f==='w'?Math.max(0,+el.value||0):el.value;if(f!=='label')render();return}
+ if(el.dataset.tam){const [i,j,c]=el.dataset.tam.split('|');const t=S.te.inter[+i].ts[+j];const set=new Set(t.am||[]);const cs=c==='murs'?['murs','faience']:[c];cs.forEach(x=>el.checked?set.add(x):set.delete(x));if(c==='murs'&&el.checked)set.delete('faience'),set.add('faience');t.am=[...set];return}
+ if(el.dataset.tn!==undefined){S.te.inter[+el.dataset.tn].n=el.value;return}
  if(el.id==='jEnt'){S.jEnt=el.value;render();return}
  if(el.id==='amL'){S.amLot=el.value;render();return}
  if(el.id==='hT'){S.hT=el.value;render();return}
