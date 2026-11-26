@@ -120,7 +120,7 @@ label.chk input{width:22px;height:22px;flex:none}
 <body>
 <header>
   <img class="logo" src="logo-h.png" alt="GBMP Bâtiment" width="76" height="48">
-  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux</span></div>
+  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v19</span></span></div>
   <div class="who" id="who"></div>
 </header>
 <nav role="tablist" id="tabs" hidden>
@@ -138,8 +138,8 @@ label.chk input{width:22px;height:22px;flex:none}
 <div class="toast" id="toast" role="status"></div>
 <script src="config.js"></script>
 <script src="lib/supabase.js"></script>
-<script src="data.js"></script>
-<script src="lib/planning.js"></script>
+<script src="data.js?v=19"></script>
+<script src="lib/planning.js?v=19"></script>
 <script>
 {
 /* ---------- Référentiel ---------- */
@@ -721,7 +721,7 @@ sb.auth.getSession().then(({data})=>{S.session=data.session;if(S.session)loadAll
 sb.auth.onAuthStateChange((ev,ses)=>{const was=S.session&&S.session.user.id;S.session=ses;if(!ses){S.me=null;S.docs={};S.ents=null;S.journal=null;setProf();closeSheet();render()}else if(was!==ses.user.id){loadAll()}});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.session&&(!S.loaded||Date.now()-S.loaded>60000))loadAll()});
 setInterval(()=>{if(document.visibilityState==='visible'&&S.session&&!S.edit)loadAll()},180000);
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator){let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloaded)return;reloaded=true;location.reload()});navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{r.update();setInterval(()=>r.update(),300000)}).catch(()=>{})}
 }
 </script>
 </body>
