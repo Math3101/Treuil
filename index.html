@@ -128,7 +128,7 @@ label.chk input{width:22px;height:22px;flex:none}
 <body>
 <header>
   <img class="logo" src="logo-h.png" alt="GBMP Bâtiment" width="76" height="48">
-  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v25</span></span></div>
+  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v26</span></span></div>
   <div class="who" id="who"></div>
 </header>
 <nav role="tablist" id="tabs" hidden>
@@ -146,8 +146,8 @@ label.chk input{width:22px;height:22px;flex:none}
 <div class="toast" id="toast" role="status"></div>
 <script src="config.js"></script>
 <script src="lib/supabase.js"></script>
-<script src="data.js?v=25"></script>
-<script src="lib/planning.js?v=25"></script>
+<script src="data.js?v=26"></script>
+<script src="lib/planning.js?v=26"></script>
 <script>
 {
 /* ---------- Référentiel ---------- */
@@ -475,11 +475,20 @@ function vSynthGlob(){
  <p class="note">Moyennes pondérées par le poids des tâches. Une tâche non relevée compte pour 0 % ; une tâche « sans objet » est exclue du calcul.</p>`;
 }
 function vAm(){
- const lots=LOTK;if(!S.amLot||!lots.includes(S.amLot))S.amLot=(prof.role==='saisie'&&prof.lots[0])||lots[0];
+ const lots=LOTK;if(S.amLot==null||(S.amLot!=='*'&&!lots.includes(S.amLot)))S.amLot=(prof.role==='saisie'&&prof.lots[0])||'*';
  const L=S.amLot;const rows=[];
+ if(L==='*'){const amz=ALL.filter(id=>zoneAm(id).st==='oui');const fT=S.amT||'';const list=amz.filter(id=>!fT||Z[id].tower===fT);
+  const tr=list.map(id=>{const z=Z[id],am=zoneAm(id);const ts=TPL[z.kind].filter(t=>t.am.some(c=>am.cats.includes(c))&&!(isSdb(t)&&z.kind==='LOG'&&!attrs(id).sdb));const lotsT=[...new Set(ts.map(t=>t.lot))];
+   const mats=z.kind==='LOG'?amGroups(id).map(g=>`${g.ks.map(amBadge).join('')} <b>${esc(g.rooms.join(', '))}</b><br><span class="tw">${g.mats.map(esc).join(' · ')}</span>`).join('<br>'):am.mats.map(esc).join('<br>');
+   return `<tr><td><a href="#amiante" data-z="${id}">${esc(z.kind==='LOG'?id:z.name)}</a>${z.kind==='LOG'?`<br><span class="tw">${niv(z.lvl)} · ${z.info.typo}</span>`:''}</td><td>${mats}</td><td>${lotsT.length?'':'<span class="tw">aucune tâche prévue au contact de ces matériaux</span>'}${lotsT.map(l=>`<span class="lot" style="display:inline-block;margin:0 3px 3px 0">${esc(l)}</span>`).join('')}<br><span class="tw">${esc(lotsT.map(l=>entOf(l)).filter(Boolean).join(', '))}</span></td></tr>`}).join('');
+  const nLog=list.filter(id=>Z[id].kind==='LOG').length;
+  return `<div class="card"><h2>Zones amiantées</h2><div class="bar"><label for="amL">Lot</label><select id="amL" class="f" style="max-width:340px"><option value="*" selected>Tous les lots</option>${lots.map(l=>`<option value="${l}">${esc(lotLab(l))}</option>`).join('')}</select><div class="seg">${['','D','C','B','A'].map(t=>`<button class="chip" data-amt="${t}" aria-pressed="${fT===t}">${t?'Tour '+t:'Toutes'}</button>`).join('')}</div></div>
+  <div class="amw">Toute intervention sur ou à proximité de ces matériaux suit le mode opératoire validé par l’AMO amiante et le coordonnateur SPS (CCTP 06.4.1.2, sous-sections 3 et 4).</div>
+  <p class="mute">${nLog} logement(s) et ${list.length-nLog} partie(s) commune(s) avec amiante${fT?' dans la tour '+fT:''}. Légende : ${amBadge('S')} sol · ${amBadge('V')} paroi verticale · ${amBadge('P')} plafond.</p>
+  <div class="scroll"><table class="stack"><thead><tr><th>Logement / zone</th><th>Matériaux amiantés par pièce</th><th>Lots concernés</th></tr></thead><tbody>${tr||'<tr><td colspan="3">Aucune zone.</td></tr>'}</tbody></table></div></div>`}
  for(const id of ALL){const am=zoneAm(id);if(am.st!=='oui')continue;const ts=TPL[Z[id].kind].filter(t=>t.lot===L&&t.am.some(c=>am.cats.includes(c)));if(!ts.length)continue;const r=agg([id],L);rows.push(`<tr><td><a href="#amiante" data-z="${id}">${esc(Z[id].kind==='LOG'?id+' · '+niv(Z[id].lvl):Z[id].name)}</a></td><td>${ts.map(t=>esc(t.label)).join('<br>')}</td><td>${am.cats.map(c=>esc(AMC[c])).join(', ')}</td><td class="n">${pct(r.p)}</td></tr>`)}
  const ver=Object.values(Z).filter(z=>z.kind==='LOG'&&attrs(z.id).am==='verif').map(z=>`<a href="#amiante" data-z="${z.id}">${z.id}</a>`).join(', ');
- return `<div class="card"><h2>Mes interventions en zone amiantée</h2><div class="bar"><label for="amL">Lot</label><select id="amL" class="f" style="max-width:340px">${lots.map(l=>`<option value="${l}" ${l===L?'selected':''}>${esc(lotLab(l))}</option>`).join('')}</select></div>
+ return `<div class="card"><h2>Mes interventions en zone amiantée</h2><div class="bar"><label for="amL">Lot</label><select id="amL" class="f" style="max-width:340px"><option value="*">Tous les lots</option>${lots.map(l=>`<option value="${l}" ${l===L?'selected':''}>${esc(lotLab(l))}</option>`).join('')}</select></div>
  <div class="amw">Toute intervention sur ou à proximité de ces matériaux suit le mode opératoire validé par l’AMO amiante et le coordonnateur SPS (CCTP 06.4.1.2, sous-sections 3 et 4).</div>
  <p class="mute">${rows.length} zone(s) concernée(s) pour le lot ${esc(L)}.</p>
  <div class="scroll"><table class="stack"><thead><tr><th>Zone</th><th>Tâches concernées</th><th>Matériaux amiantés</th><th class="n">Avancement lot</th></tr></thead><tbody>${rows.join('')||'<tr><td colspan="4">Aucune zone amiantée pour ce lot.</td></tr>'}</tbody></table></div>
@@ -647,6 +656,7 @@ document.addEventListener('click',async e=>{
  if(b.id==='cadSave'){const m={...S.cadEd,edited:new Date().toISOString()};S.cadEd=null;S.cadOpen=true;if(await savePlan({model:m,base:planCfg().base||((S.cfg.plan||{}).base)||((S.cfg.plan||{}).model)||PLAN0}))toast('Cadences enregistrées : le planning est recalculé.');return}
  if(b.id==='cadReset'){const base=(S.cfg.plan||{}).base||PLAN0;S.cadEd=JSON.parse(JSON.stringify(base));render();toast('Valeurs du fichier rechargées : cliquez sur Enregistrer pour les appliquer.');return}
  if(b.id==='plToday'){planScrollToday();return}
+ if(b.dataset.amt!==undefined){S.amT=b.dataset.amt;render();return}
  if(b.dataset.plw!==undefined){const d=+b.dataset.plw;if(d===0){S.plW0=null}else{S.plW0=(S.plW0||0)+d*7*(S.plNW||3)}render();return}
  if(b.dataset.plv!==undefined){S.plV=b.dataset.plv;render();return}
  if(b.dataset.plm!==undefined){S.plMode=b.dataset.plm;render();return}

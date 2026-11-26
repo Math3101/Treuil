@@ -1,6 +1,6 @@
 // Cache de l'application (pas des données) : ouverture rapide et plans disponibles hors réseau.
-const V = 'treuil-v25';
-const SHELL = ['./', './index.html', './config.js', './data.js?v=25', './lib/supabase.js', './lib/planning.js?v=25', './lib/jspdf.umd.min.js',
+const V = 'treuil-v26';
+const SHELL = ['./', './index.html', './config.js', './data.js?v=26', './lib/supabase.js', './lib/planning.js?v=26', './lib/jspdf.umd.min.js',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './logo.png', './logo-h.png',
   ...['A','B','C','D'].flatMap(t => [`./plans/${t}_rdc.png`, `./plans/${t}_courant.png`])];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(SHELL))); self.skipWaiting(); });
