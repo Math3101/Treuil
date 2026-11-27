@@ -78,7 +78,8 @@ main{padding:14px max(3vw,12px) 80px;max-width:1300px;margin:0 auto}
 .ghead{position:sticky;top:0;z-index:3;background:var(--card);height:46px;border-bottom:1px solid var(--line)}.gwr,.gdr{position:relative;height:23px}.gw{position:absolute;top:0;height:23px;background:var(--ink);color:var(--bg);font-size:11px;font-weight:700;padding:4px 4px;white-space:nowrap;overflow:hidden;border-right:1px solid var(--card)}.gw.cur{background:var(--red);color:#fff}
 .gdd{position:absolute;top:0;height:23px;font-size:10px;text-align:center;line-height:23px;color:var(--mute)}.gdd.mon{border-left:1px solid var(--line)}.gdd.today{background:var(--red);color:#fff;font-weight:700}
 .gleft{position:sticky;left:0;z-index:2;background:var(--card);border-right:1px solid var(--line)}.glab{display:flex;align-items:center;gap:4px;height:24px;padding:0 6px;font-size:12px;font-weight:700;text-decoration:none;color:var(--ink);border-bottom:1px solid #00000010;white-space:nowrap}.gtw,.gtwb{height:24px;background:var(--bg);font-weight:700;font-size:12px;padding:4px 6px;border-bottom:1px solid var(--line)}
-.gbody{position:relative}.grow{position:relative;height:24px;border-bottom:1px solid #00000010}.gb{position:absolute;border-radius:3px;display:block}.gb.late{outline:2px solid #d6331f;z-index:1}.gb.done{opacity:.45}
+.gbody{position:relative}.grow{position:relative;height:24px;border-bottom:1px solid #00000010}.gb{position:absolute;border-radius:3px;display:block}.gb.nrdv{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.6) 0 3px,transparent 3px 6px)}.rvt td.late{color:#b3001b;font-weight:700}.rvb{min-height:36px;padding:4px 9px;font-size:13px}
+.gb.late{outline:2px solid #d6331f;z-index:1}.gb.done{opacity:.45}
 .goff{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(45deg,transparent 0 4px,#00000014 4px 8px)}.gmon{position:absolute;top:0;bottom:0;border-left:1px solid #00000018}.gtoday{position:absolute;top:0;bottom:0;border-left:2px solid var(--red);z-index:2}
 #gtScroll{max-height:75vh;overflow:auto}.gt{border-collapse:separate;border-spacing:0}.gt thead th{position:sticky;top:0;z-index:1}.gt thead tr:nth-child(2) th{top:31px}.gt thead .gc0{z-index:3}.gt th,.gt td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:4px;vertical-align:top}.gt td{min-width:64px;width:64px}.gt .gc0{position:sticky;left:0;z-index:2;background:var(--card);text-align:left;min-width:120px;white-space:nowrap}.gt .gwk{background:var(--ink);color:var(--bg);text-align:left;white-space:nowrap}.gt .gwk.cur{background:var(--red);color:#fff}.gt .gd{font-size:12px;text-align:center;white-space:nowrap;font-weight:600}.gt .today{background:#fff4c2;color:#111}.gt .offd{background:repeating-linear-gradient(45deg,transparent 0 6px,#00000012 6px 12px)}.pnav{display:flex;gap:6px}.gshort{display:none}@media(max-width:600px){#main .chip{padding:6px 10px;font-size:14px;min-height:38px}.pnav .btn{padding:6px 12px}.gt td{min-width:56px;width:56px;padding:2px}.gt th{padding:3px 2px}.gt .gc0{min-width:62px;max-width:62px;white-space:normal;font-size:12px;padding:3px 4px}.gt .gd{font-size:11px}.gfull,.gm{display:none}.gshort{display:inline}.lcv{font-size:11px;padding:2px 2px}.lcv small{font-size:9px}.gt .gwk{font-size:12px}}
 .gcol{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}.lcv{display:block;margin:0 0 3px;min-width:0}
@@ -128,12 +129,13 @@ label.chk input{width:22px;height:22px;flex:none}
 <body>
 <header>
   <img class="logo" src="logo-h.png" alt="GBMP Bâtiment" width="76" height="48">
-  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v30</span></span></div>
+  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v31</span></span></div>
   <div class="who" id="who"></div>
 </header>
 <nav role="tablist" id="tabs" hidden>
   <button role="tab" data-v="plan" aria-selected="true">Plan</button>
   <button role="tab" data-v="planning">Planning</button>
+  <button role="tab" data-v="rdv">Rendez-vous</button>
   <button role="tab" data-v="synth">Synthèse</button>
   <button role="tab" data-v="amiante">Amiante</button>
   <button role="tab" data-v="hist">Historique</button>
@@ -146,8 +148,8 @@ label.chk input{width:22px;height:22px;flex:none}
 <div class="toast" id="toast" role="status"></div>
 <script src="config.js"></script>
 <script src="lib/supabase.js"></script>
-<script src="data.js?v=30"></script>
-<script src="lib/planning.js?v=30"></script>
+<script src="data.js?v=31"></script>
+<script src="lib/planning.js?v=31"></script>
 <script>
 {
 /* ---------- Référentiel ---------- */
@@ -269,7 +271,7 @@ function render(){
  if(!ok){$('#main').innerHTML=S.me?vWait():'<p class="mute">Chargement…</p>';return}
  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===S.view));
  const m=$('#main');
- m.innerHTML=({planning:vPlanning,plan:vPlan,synth:vSynth,amiante:vAm,hist:vHist,export:vExport,reglages:vReg,activite:vAct}[S.view]||vPlan)();
+ m.innerHTML=({planning:vPlanning,rdv:vRdv,plan:vPlan,synth:vSynth,amiante:vAm,hist:vHist,export:vExport,reglages:vReg,activite:vAct}[S.view]||vPlan)();
   if(S.view==='planning'){const sc=$('#gtScroll');if(sc){if(S.plSL!=null)sc.scrollLeft=S.plSL;else planScrollToday();sc.onscroll=()=>{S.plSL=sc.scrollLeft}}}
  if(S.open)renderSheet();
 }
@@ -357,11 +359,11 @@ function vPlanGantt(){
  // barres
  const bar=(id,ph,st,lane,nl)=>{const C=P.comp.calFor(st.ent);let a=TP.isoToNum(st.s.d),e=TP.isoToNum(st.e.d);const segs=[];let cur=null;for(let n=a;n<=e;n++){if(!C.isWork(n)||!ci.has(n)){cur=null;continue}const k=ci.get(n);let l=k*DW,r=(k+1)*DW;if(n===a&&st.s.pm)l+=DW/2;if(n===e&&!st.e.pm)r-=DW/2;if(cur&&cur.r===l)cur.r=r;else{cur={l,r};segs.push(cur)}}
   const x=(P.byLog[id]||{})[ph];const s2=planState(id,ph,x);const late=s2.l.startsWith('En retard')||s2.l.startsWith('Échéance');const h=Math.max(4,Math.floor((RH-4)/nl));
-  return segs.map(g=>`<a href="#planning" data-z="${id}" class="gb${late?' late':''}${s2.l==='Terminé'?' done':''}" style="left:${g.l}px;width:${Math.max(3,g.r-g.l-1)}px;top:${2+lane*h}px;height:${h-1}px;background:${entC(st.ent)}" title="${esc(id+' · '+st.ent+' · '+PHN[ph]+' · '+fd(st.s)+' → '+fd(st.e)+' · '+s2.l)}"></a>`).join('')};
+  return segs.map(g=>`<a href="#planning" data-z="${id}" class="gb${late?' late':''}${s2.l==='Terminé'?' done':''}${rdvOf(id,ph).st==='confirme'?'':' nrdv'}" style="left:${g.l}px;width:${Math.max(3,g.r-g.l-1)}px;top:${2+lane*h}px;height:${h-1}px;background:${entC(st.ent)}" title="${esc(id+' · '+st.ent+' · '+PHN[ph]+' · '+fd(st.s)+' → '+fd(st.e)+' · '+s2.l)}"></a>`).join('')};
  let left='',body='';for(const g of rows){left+=`<div class="gtw">Tour ${g.t}</div>`;body+=`<div class="gtwb" style="width:${W}px"></div>`;
   for(const id of g.ids){const z=Z[id];left+=`<a href="#planning" data-z="${id}" class="glab">${id}<span class="tw"> ${niv(z.lvl)}</span></a>`;let bars='';for(const ph of phs){const x=(P.byLog[id]||{})[ph];if(!x)continue;x.steps.forEach((st,k)=>{bars+=bar(id,ph,st,k,x.steps.length)})}body+=`<div class="grow" style="width:${W}px">${bars}</div>`}}
  const ents=[];for(const ph of phs)for(const x of (P.model.tpl||[]).filter(q=>q.phase===ph))if(!ents.includes(x.ent))ents.push(x.ent);
- return `<div class="bar"><button class="btn" id="plToday">Aller à aujourd’hui</button><div class="legend" style="margin:0">${ents.map(e=>`<span><i style="background:${entC(e)}"></i>${esc(e)}</span>`).join('')}<span><i style="background:#fff;outline:2px solid #d6331f"></i>en retard</span><span><i style="background:#999;opacity:.45"></i>terminé</span></div></div>
+ return `<div class="bar"><button class="btn" id="plToday">Aller à aujourd’hui</button><div class="legend" style="margin:0">${ents.map(e=>`<span><i style="background:${entC(e)}"></i>${esc(e)}</span>`).join('')}<span><i style="background:#fff;outline:2px solid #d6331f"></i>en retard</span><span><i style="background:#999;opacity:.45"></i>terminé</span><span><i style="background:repeating-linear-gradient(135deg,#fff 0 3px,#888 3px 6px)"></i>rayé : RDV locataire non confirmé</span></div></div>
  <div class="gantt" id="gtScroll" style="--lw:${LW}px"><div class="gcorner">Logement</div><div class="ghead" style="width:${W}px"><div class="gwr">${wkH}</div><div class="gdr">${dyH}</div></div>
  <div class="gleft">${left}</div><div class="gbody" style="width:${W}px">${bg}${body}</div></div>
  <p class="note">Une ligne par logement, dans l’ordre des numéros : les barres forment l’escalier de chaque intervention ; un logement déplacé dans l’ordre de passage apparaît en décalé. Barre fine : plusieurs entreprises dans le même logement (salle de bain). Touchez une barre ou un numéro pour ouvrir la fiche.</p>`;
@@ -535,6 +537,36 @@ function vAct(){
  <div class="card" style="margin-top:14px"><div class="bar"><h2 style="margin:0">Journal</h2><select id="jEnt" class="f" style="max-width:260px;margin-left:auto"><option value="">Toutes les entreprises</option>${A.map(a=>`<option value="${esc(a.id)}" ${S.jEnt===a.id?'selected':''}>${esc(a.nom)}</option>`).join('')}</select></div>
  <div class="scroll"><table class="stack"><thead><tr><th>Date</th><th>Entreprise</th><th>Action</th><th>Détail</th></tr></thead><tbody>${J.slice(0,300).map(j=>`<tr><td>${fmtD(j.at)}</td><td>${esc(j.nom||'—')}</td><td>${esc(ICON[j.action]||j.action)}</td><td>${esc(j.detail||'')}</td></tr>`).join('')||'<tr><td colspan="4">Aucune activité.</td></tr>'}</tbody></table></div><p class="note">400 derniers évènements. Les relevés indiquent : logement · tâche · valeur.</p></div>`;
 }
+/* ---------- Rendez-vous locataires ---------- */
+const RDVST={'':'À contacter',propose:'Proposé',confirme:'Confirmé',reporter:'À reprogrammer'};
+const RDVC={'':'#8a8f98',propose:'#e08a00',confirme:'#2e9e5b',reporter:'#d6331f'};
+const CREN={j:'Journée',m:'Matin',a:'Après-midi'};
+const rdvOf=(id,ph)=>(((attrs(id).rdv)||{})[ph])||{};
+async function setRdv(id,ph,patch){const cur={...(attrs(id).rdv||{})};const r={...(cur[ph]||{}),...patch,by:prof.label,at:new Date().toISOString()};const h=(r.h||[]).slice(-9);h.push({st:r.st||'',d:r.d||'',cr:r.cr||'',by:r.by,at:r.at});r.h=h;cur[ph]=r;await saveAttrs(id,{rdv:cur})}
+const addDays=(iso,n)=>TP.numToIso(TP.isoToNum(iso)+n);
+function vRdv(){
+ const P=planComp();const adm=prof.role==='admin';const ph=S.rvP||'P1',tw=S.rvT||'',per=S.rvPer||'30',fs=S.rvS||'';const T=todayIso();
+ let rows=[];for(const t of ['D','C','B','A']){if(tw&&t!==tw)continue;const L=P.L[ph+'|'+t];if(!L)continue;for(const x of L.list){const r=rdvOf(x.id,ph);rows.push({id:x.id,x,r,st:r.st||'',lim:addDays(x.s.d,-15)})}}
+ rows.sort((a,b)=>(a.x.s.d+(a.x.s.pm?'1':'0')).localeCompare(b.x.s.d+(b.x.s.pm?'1':'0')));
+ const inPer=r=>per==='all'?true:per==='late'?(r.st!=='confirme'&&r.lim<=T&&r.x.e.d>=T):r.x.s.d<=addDays(T,+per)&&r.x.e.d>=T;
+ const list=rows.filter(r=>inPer(r)&&(!fs||r.st===fs||(fs==='non'&&r.st!=='confirme')));
+ const cnt=k=>rows.filter(inPer).filter(r=>r.st===k).length;const urg=rows.filter(r=>r.st!=='confirme'&&r.lim<=T&&r.x.e.d>=T).length;
+ const sel=(id,v,o)=>`<select class="f" ${adm?'':'disabled'} data-rv="${id}" style="width:auto;padding:6px">${o}</select>`;
+ const tr=list.map(({id,x,r,st,lim})=>{const ecart=r.d&&r.d!==x.s.d;return `<tr><td><a href="#rdv" data-z="${id}"><b>${id}</b></a><br><span class="tw">${niv(Z[id].lvl)} · ${Z[id].info.typo}</span></td>
+  <td>${fdl(x.s)}<br><span class="tw">→ ${fdl(x.e)}</span></td><td class="${st!=='confirme'&&lim<=T?'late':''}">${fdl({d:lim})}</td>
+  <td>${adm?`<input type="date" data-rvd="${id}" value="${esc(r.d||'')}" style="width:150px;padding:6px"> <select class="f" data-rvc="${id}" style="width:auto;padding:6px">${Object.entries(CREN).map(([k,l])=>`<option value="${k}" ${(r.cr||'j')===k?'selected':''}>${l}</option>`).join('')}</select>`:(r.d?fdl({d:r.d})+' · '+(CREN[r.cr||'j']):'—')}${ecart?`<br><span class="tw" style="color:#b3001b">≠ planning (${fd(x.s)})</span>`:''}</td>
+  <td><div class="btns">${Object.entries(RDVST).map(([k,l])=>`<button class="btn rvb ${st===k?'on':''}" ${adm?'':'disabled'} data-rvs="${id}|${k}" style="${st===k?`background:${RDVC[k]};border-color:${RDVC[k]};color:#fff`:''}">${l}</button>`).join('')}</div></td>
+  <td>${adm?`<select class="f" data-rvp="${id}" style="width:auto;padding:6px"><option value="">—</option><option value="present" ${r.pr==='present'?'selected':''}>Locataire présent</option><option value="cles" ${r.pr==='cles'?'selected':''}>Clés remises</option></select>`:({present:'Locataire présent',cles:'Clés remises'}[r.pr]||'—')}</td>
+  <td>${adm?`<input type="text" data-rvn="${id}" value="${esc(r.n||'')}" placeholder="Note" style="min-width:140px;padding:6px">`:esc(r.n||'')}${r.at?`<br><span class="tw">${esc(r.by||'')} · ${fmtD(r.at)}</span>`:''}</td></tr>`}).join('');
+ return `<div class="card"><h2>Rendez-vous locataires</h2>
+ <div class="bar seg">${PH.map(p=>`<button class="chip" data-rvph="${p}" aria-pressed="${p===ph}">${esc(PHN[p])}</button>`).join('')}</div>
+ <div class="bar"><div class="seg">${['','D','C','B','A'].map(t=>`<button class="chip" data-rvt="${t}" aria-pressed="${t===tw}">${t?'Tour '+t:'Toutes'}</button>`).join('')}</div>
+ <select class="f" id="rvPer" style="width:auto">${[['15','Prévus dans les 15 jours'],['30','Prévus dans les 30 jours'],['60','Prévus dans les 60 jours'],['late','À prévenir en urgence'],['all','Tout le planning']].map(([k,l])=>`<option value="${k}" ${per===k?'selected':''}>${l}</option>`).join('')}</select>
+ <select class="f" id="rvS" style="width:auto"><option value="">Tous les statuts</option><option value="non" ${fs==='non'?'selected':''}>Non confirmés</option>${Object.entries(RDVST).map(([k,l])=>`<option value="${k}" ${fs===k&&fs!==''?'selected':''}>${l}</option>`).join('')}</select></div>
+ <div class="kpi" style="margin-bottom:10px">${Object.entries(RDVST).map(([k,l])=>`<div style="border-left:6px solid ${RDVC[k]}"><span class="mute">${l}</span><b>${cnt(k)}</b></div>`).join('')}<div style="border-left:6px solid #7a0010"><span class="mute">À prévenir en urgence</span><b>${urg}</b></div></div>
+ <p class="note">« Contacter avant » = 15 jours avant le passage prévu (CCTP 00.4.9). En rouge : délai dépassé sans rendez-vous confirmé. Un rendez-vous confirmé sans date reprend la date du planning.${adm?'':' Consultation seule : la prise de rendez-vous est gérée par GBMP.'}</p>
+ <div class="scroll"><table class="stack rvt"><thead><tr><th>Logement</th><th>Prévu au planning</th><th>Contacter avant</th><th>Rendez-vous</th><th>Statut</th><th>Présence</th><th>Note</th></tr></thead><tbody>${tr||'<tr><td colspan="7">Aucun logement sur cette sélection.</td></tr>'}</tbody></table></div></div>`;
+}
 const AMOPT=[['S','sols','Sol'],['V','murs','Paroi verticale'],['P','plafond','Plafond']];
 const totW=ts=>ts.filter(t=>!t.sdb).reduce((a,t)=>a+(+t.w||0),0),totS=ts=>ts.filter(t=>t.sdb).reduce((a,t)=>a+(+t.w||0),0);
 const fmtN=n=>String(Math.round(n*100)/100).replace('.',',');
@@ -577,7 +609,7 @@ function groupedTasks(id,z,a){const all=TPL[z.kind].filter(t=>!(isSdb(t)&&!a.sdb
  const used=new Set(groups.flatMap(g=>g.ts.map(t=>t.id)));const rest=all.filter(t=>!used.has(t.id));if(rest.length)groups.push({n:'Autres tâches',ts:rest});
  for(const g of groups){if(!g.ts.length)continue;const gk=g.n||'';const byE=new Map();for(const t of g.ts){const e=entOfTask(t);if(!byE.has(e))byE.set(e,[]);byE.get(e).push(t)}
   const open=!g.n||S.igOpen.has(gk)||g.ts.some(t=>t.id===S.edit);
-  if(g.n){const r=aggT(id,g.ts);out.push({h:`<button class="ig" data-ig="${esc(gk)}" aria-expanded="${open}"><span><b>${esc(g.n)}</b><br><span class="igs">${(x=>x?'Prévu du '+fd(x.s)+' au '+fd(x.e)+' · ':'')(z.kind==='LOG'?(planComp().byLog[id]||{})[PH[INTER.findIndex(q=>q.n===g.n)]]:null)}${esc([...byE.keys()].join(' · '))} · ${r.nr} non relevée(s) sur ${r.n}</span></span><span class="igp">${r.n&&r.nr===r.n?'—':pct(r.p)} <span aria-hidden="true">${open?'▾':'▸'}</span></span></button>`})}
+  if(g.n){const r=aggT(id,g.ts);out.push({h:`<button class="ig" data-ig="${esc(gk)}" aria-expanded="${open}"><span><b>${esc(g.n)}</b><br><span class="igs">${(x=>x?'Prévu du '+fd(x.s)+' au '+fd(x.e)+' · RDV '+(r=>RDVST[r.st||'']+(r.st==='confirme'&&r.d?' '+fd({d:r.d})+(r.cr&&r.cr!=='j'?' '+CREN[r.cr].toLowerCase():''):''))(rdvOf(id,PH[INTER.findIndex(q=>q.n===g.n)]))+' · ':'')(z.kind==='LOG'?(planComp().byLog[id]||{})[PH[INTER.findIndex(q=>q.n===g.n)]]:null)}${esc([...byE.keys()].join(' · '))} · ${r.nr} non relevée(s) sur ${r.n}</span></span><span class="igp">${r.n&&r.nr===r.n?'—':pct(r.p)} <span aria-hidden="true">${open?'▾':'▸'}</span></span></button>`})}
   if(!open)continue;
   for(const [e,ts] of byE){const r=aggT(id,ts);out.push({h:`<div class="eg">${esc(e)} <span class="tw">· ${r.n&&r.nr===r.n?'non relevé':pct(r.p)}</span></div>`});for(const t of ts)out.push({t})}}
  return out}
@@ -662,6 +694,9 @@ document.addEventListener('click',async e=>{
  if(b.id==='cadSave'){const m={...S.cadEd,edited:new Date().toISOString()};S.cadEd=null;S.cadOpen=true;if(await savePlan({model:m,base:planCfg().base||((S.cfg.plan||{}).base)||((S.cfg.plan||{}).model)||PLAN0}))toast('Cadences enregistrées : le planning est recalculé.');return}
  if(b.id==='cadReset'){const base=(S.cfg.plan||{}).base||PLAN0;S.cadEd=JSON.parse(JSON.stringify(base));render();toast('Valeurs du fichier rechargées : cliquez sur Enregistrer pour les appliquer.');return}
  if(b.id==='plToday'){planScrollToday();return}
+ if(b.dataset.rvph){S.rvP=b.dataset.rvph;render();return}
+ if(b.dataset.rvt!==undefined){S.rvT=b.dataset.rvt;render();return}
+ if(b.dataset.rvs){const [id,st]=b.dataset.rvs.split('|');const ph=S.rvP||'P1';const r=rdvOf(id,ph);const patch={st};if(st==='confirme'&&!r.d){const x=(planComp().byLog[id]||{})[ph];if(x){patch.d=x.s.d;patch.cr=x.s.pm?'a':'j'}}await setRdv(id,ph,patch);toast(id+' : '+RDVST[st]);return}
  if(b.dataset.amt!==undefined){S.amT=b.dataset.amt;render();return}
  if(b.dataset.plw!==undefined){const d=+b.dataset.plw;if(d===0){S.plW0=null}else{S.plW0=(S.plW0||0)+d*7*(S.plNW||3)}render();return}
  if(b.dataset.plv!==undefined){S.plV=b.dataset.plv;render();return}
@@ -735,6 +770,12 @@ document.addEventListener('change',async e=>{const el=e.target;
  if(el.id==='aAm'){saveAttrs(S.open,{am:el.value});return}
  if(el.dataset.cad){if(!S.cadEd)S.cadEd=JSON.parse(JSON.stringify(planCfg().model));const [i,k]=el.dataset.cad.split('|');const t=S.cadEd.tasks[+i];if(k==='imp')t.imp=el.value?TP.isoToNum(el.value):null;else t[k]=el.value===''?null:Math.max(0,+el.value);render();return}
  if(el.dataset.tpl){if(!S.cadEd)S.cadEd=JSON.parse(JSON.stringify(planCfg().model));const [i,k]=el.dataset.tpl.split('|');const x=S.cadEd.tpl[+i];x[k]=k==='lien'?el.value:Math.max(k==='dur'?0.5:0,+el.value||0);render();return}
+ if(el.id==='rvPer'){S.rvPer=el.value;render();return}
+ if(el.id==='rvS'){S.rvS=el.value;render();return}
+ if(el.dataset.rvd){await setRdv(el.dataset.rvd,S.rvP||'P1',{d:el.value});return}
+ if(el.dataset.rvc){await setRdv(el.dataset.rvc,S.rvP||'P1',{cr:el.value});return}
+ if(el.dataset.rvp!==undefined&&el.dataset.rvp){await setRdv(el.dataset.rvp,S.rvP||'P1',{pr:el.value});return}
+ if(el.dataset.rvn){await setRdv(el.dataset.rvn,S.rvP||'P1',{n:el.value.trim().slice(0,120)});return}
  if(el.id==='plNW'){S.plNW=+el.value;render();return}
  if(el.id==='plPast'){S.plPast=el.checked;render();return}
  if(el.id==='plI'){const f=el.files[0];if(!f)return;const o=$('#plMsg');o.textContent='Lecture…';try{const X=await loadXlsx();const wb=X.read(await f.arrayBuffer(),{cellDates:false});const m=TP.parseWorkbook(X,wb);if(!m.tasks.length)throw new Error('aucune tâche trouvée');TP.compute(m,[]);if(await savePlan({model:m,base:m}))toast('Planning importé : '+m.tasks.length+' tâches, '+m.feries.length+' jours fériés.')}catch(x){o.textContent='Fichier illisible : '+errMsg(x)}el.value='';return}
@@ -751,7 +792,7 @@ document.addEventListener('submit',async e=>{e.preventDefault();
  if(e.target.id==='entF'){const nom=$('#eN').value.trim(),pin=$('#eP').value.trim();if(!/^\d{4}$/.test(pin)){$('#entMsg').textContent='Le code doit comporter 4 chiffres.';return}const {error}=await sb.rpc('admin_create_entreprise',{p_nom:nom,p_pin:pin,p_role:$('#eR').value,p_lots:parseLots($('#eL').value),p_taches:parseTaches($('#eT').value)});if(error){$('#entMsg').textContent=errMsg(error);return}await loadEnt();render();const m=$('#entMsg');if(m){m.innerHTML=`<div class="amw">« ${esc(nom)} » créée avec le code <b>${esc(pin)}</b>. Notez-le et transmettez-le à l’entreprise.</div>`}return}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.open)closeSheet()});
-window.addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(v&&v!==S.view&&['plan','planning','synth','amiante','hist','export','reglages','activite'].includes(v)){S.view=v;render()}});
+window.addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(v&&v!==S.view&&['plan','planning','rdv','synth','amiante','hist','export','reglages','activite'].includes(v)){S.view=v;render()}});
 
 function loadXlsx(){return new Promise((res,rej)=>{if(window.XLSX)return res(window.XLSX);const sc=document.createElement('script');sc.src='lib/xlsx.mini.min.js';sc.onload=()=>res(window.XLSX);sc.onerror=rej;document.head.appendChild(sc)})}
 const nrm=x=>String(x??'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim();
