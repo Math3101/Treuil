@@ -130,7 +130,7 @@ label.chk input{width:22px;height:22px;flex:none}
 <body>
 <header>
   <img class="logo" src="logo-h.png" alt="GBMP Bâtiment" width="76" height="48">
-  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v36</span></span></div>
+  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v37</span></span></div>
   <div class="who" id="who"></div>
 </header>
 <nav role="tablist" id="tabs" hidden>
@@ -150,8 +150,8 @@ label.chk input{width:22px;height:22px;flex:none}
 <div class="toast" id="toast" role="status"></div>
 <script src="config.js"></script>
 <script src="lib/supabase.js"></script>
-<script src="data.js?v=36"></script>
-<script src="lib/planning.js?v=36"></script>
+<script src="data.js?v=37"></script>
+<script src="lib/planning.js?v=37"></script>
 <script>
 {
 /* ---------- Référentiel ---------- */
@@ -273,7 +273,7 @@ function render(){
  if(!ok){$('#main').innerHTML=S.me?vWait():'<p class="mute">Chargement…</p>';return}
  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===S.view));
  const m=$('#main');
- m.innerHTML=(lbHtml())+({planning:vPlanning,rdv:vRdv,plan:vPlan,synth:vSynth,amiante:vAm,hist:vHist,photos:vPhotos,export:vExport,reglages:vReg,activite:vAct}[S.view]||vPlan)();
+ m.innerHTML=(lbHtml())+(S.view==='rdv'?rvAskHtml():'')+({planning:vPlanning,rdv:vRdv,plan:vPlan,synth:vSynth,amiante:vAm,hist:vHist,photos:vPhotos,export:vExport,reglages:vReg,activite:vAct}[S.view]||vPlan)();
   if(S.view==='planning'){const sc=$('#gtScroll');if(sc){if(S.plSL!=null)sc.scrollLeft=S.plSL;else planScrollToday();sc.onscroll=()=>{S.plSL=sc.scrollLeft}}}
  if(S.open)renderSheet();
 }
@@ -573,6 +573,14 @@ function rvHistTable(list,withId){const prev={};const asc=[...list].sort((a,b)=>
   if(p&&(p.pr||'')!==(e.pr||''))ch.push(({present:'Locataire présent',cles:'Clés remises'}[e.pr])||'présence effacée');if(p&&(p.n||'')!==(e.n||''))ch.push(e.n?'Note : « '+e.n+' »':'note effacée');
   desc.set(e,ch.length?ch.join(' · '):'Mise à jour');prev[e.id]=e}
  return `<div class="scroll"><table class="stack"><thead><tr><th>Date</th>${withId?'<th>Logement</th>':''}<th>Modification</th><th>Par</th></tr></thead><tbody>${list.map(e=>`<tr><td>${fmtD(e.at)}</td>${withId?`<td><b>${esc(e.id)}</b></td>`:''}<td><span class="pd2" style="background:${RDVC[e.st||'']}"></span>${esc(desc.get(e))}</td><td>${esc(e.by||'')}</td></tr>`).join('')}</tbody></table></div>`}
+async function applyRvs(id,st){const ph=S.rvP||'P1';const r=rdvOf(id,ph);const patch={st};if(st==='confirme'&&!r.d){const x=(planComp().byLog[id]||{})[ph];if(x){patch.d=x.s.d;patch.cr=x.s.pm?'a':'j'}}await setRdv(id,ph,patch);render();toast(id+' : '+RDVST[st])}
+function rvAskHtml(){const a=S.rvAsk;if(!a)return '';const ph=S.rvP||'P1';const r=rdvOf(a.id,ph);const x=(planComp().byLog[a.id]||{})[ph];
+ const d=r.d?fdl({d:r.d})+' · '+CREN[r.cr||'j'].toLowerCase():(x?fdl(x.s)+' (date du planning)':'date à préciser');
+ const conf=a.st==='confirme';
+ return `<div class="lb" id="rvAskBg" role="dialog" aria-modal="true" aria-labelledby="rvAskT"><div class="card rvcard" style="max-width:440px;width:100%"><h2 id="rvAskT">${conf?'Confirmer le rendez-vous ?':'Annuler la confirmation ?'}</h2>
+ <p><b>${esc(a.id)}</b> · ${esc(PHN[ph])}</p>
+ <p>${conf?`Rendez-vous le <b>${esc(d)}</b>.<br>Le planning sera recalé sur cette date et les autres logements s’enchaîneront autour.`:`Le rendez-vous du <b>${esc(d)}</b> passera à « ${esc(RDVST[a.st])} ».<br>Le logement reprendra sa place normale dans le planning.`}</p>
+ <div class="btns"><button class="btn pri" id="rvAskOk">${conf?'Oui, confirmer':'Oui, annuler la confirmation'}</button><button class="btn" id="rvAskNo">Non, revenir</button></div></div></div>`}
 function vRdv(){
  const P=planComp();const adm=prof.role==='admin';const ph=S.rvP||'P1',tw=S.rvT||'',per=S.rvPer||'all',fs=S.rvS||'';const T=todayIso();
  let rows=[];for(const t of ['D','C','B','A']){if(tw&&t!==tw)continue;const L=P.L[ph+'|'+t];if(!L)continue;for(const x of L.list){const r=rdvOf(x.id,ph);rows.push({id:x.id,x,r,st:r.st||'',lim:addDays(x.s.d,-15)})}}
@@ -744,7 +752,7 @@ async function doExport(){
 
 /* ---------- Événements ---------- */
 document.addEventListener('click',async e=>{
- const b=e.target.closest('button,a,polygon,label.chip,img[data-lb],#lbX');if(!b)return;
+ const b=e.target.closest('button,a,polygon,label.chip,img[data-lb],#lbX,.rvcard,#rvAskBg');if(!b)return;
  if(b.dataset.lb){S.lb=b.dataset.lb;S.phConf=null;render();return}
  if(b.id==='lbClose'||b.id==='lbX'){S.lb=null;S.phConf=null;render();return}
  if(b.dataset.phdel){if(prof.role!=='admin')return;const p=b.dataset.phdel;if(S.phConf!==p){S.phConf=p;render();return}await delPhoto(p);return}
@@ -778,7 +786,9 @@ document.addEventListener('click',async e=>{
  if(b.dataset.rvt!==undefined){S.rvT=b.dataset.rvt;render();return}
  if(b.dataset.rvh){S.rvH=S.rvH===b.dataset.rvh?null:b.dataset.rvh;render();return}
  if(b.id==='rvHMore'){S.rvHN=(S.rvHN||50)+50;render();return}
- if(b.dataset.rvs){const [id,st]=b.dataset.rvs.split('|');const ph=S.rvP||'P1';const r=rdvOf(id,ph);const patch={st};if(st==='confirme'&&!r.d){const x=(planComp().byLog[id]||{})[ph];if(x){patch.d=x.s.d;patch.cr=x.s.pm?'a':'j'}}await setRdv(id,ph,patch);toast(id+' : '+RDVST[st]);return}
+ if(b.id==='rvAskNo'||b.id==='rvAskBg'){S.rvAsk=null;render();return}
+ if(b.id==='rvAskOk'){const a=S.rvAsk;S.rvAsk=null;if(a)await applyRvs(a.id,a.st);else render();return}
+ if(b.dataset.rvs){const [id,st]=b.dataset.rvs.split('|');const ph=S.rvP||'P1';const r=rdvOf(id,ph);if(st===(r.st||''))return;if(st==='confirme'||r.st==='confirme'){S.rvAsk={id,st};render();return}await applyRvs(id,st);return}
  if(b.dataset.amt!==undefined){S.amT=b.dataset.amt;render();return}
  if(b.dataset.plw!==undefined){const d=+b.dataset.plw;if(d===0){S.plW0=null}else{S.plW0=(S.plW0||0)+d*7*(S.plNW||3)}render();return}
  if(b.dataset.plv!==undefined){S.plV=b.dataset.plv;render();return}
