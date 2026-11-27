@@ -102,6 +102,7 @@ main{padding:14px max(3vw,12px) 80px;max-width:1300px;margin:0 auto}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 textarea,input[type=text],input[type=url],input[type=number],select.f{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--bg);font-size:16px}
 textarea{min-height:70px}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}.gph{margin:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}.gph img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;cursor:zoom-in}.gph figcaption{padding:6px 8px;font-size:13px}.ph img{cursor:zoom-in}.lb{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;gap:10px}.lb img{max-width:100%;max-height:80vh;object-fit:contain}.lbc{color:#fff;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;font-size:14px}
 .ph{display:flex;gap:6px;flex-wrap:wrap}.ph img{width:76px;height:76px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
 .amw{background:#fff4c2;color:#111;border-left:5px solid #c99a00;padding:8px 10px;font-size:13px;border-radius:4px}
 table{width:100%;border-collapse:collapse;font-size:14px}
@@ -129,7 +130,7 @@ label.chk input{width:22px;height:22px;flex:none}
 <body>
 <header>
   <img class="logo" src="logo-h.png" alt="GBMP Bâtiment" width="76" height="48">
-  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v33</span></span></div>
+  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v34</span></span></div>
   <div class="who" id="who"></div>
 </header>
 <nav role="tablist" id="tabs" hidden>
@@ -139,6 +140,7 @@ label.chk input{width:22px;height:22px;flex:none}
   <button role="tab" data-v="synth">Synthèse</button>
   <button role="tab" data-v="amiante">Amiante</button>
   <button role="tab" data-v="hist">Historique</button>
+  <button role="tab" data-v="photos">Photos</button>
   <button role="tab" data-v="export">Export PDF</button>
   <button role="tab" data-v="activite" id="tabAct" hidden>Activité</button>
   <button role="tab" data-v="reglages">Réglages</button>
@@ -148,8 +150,8 @@ label.chk input{width:22px;height:22px;flex:none}
 <div class="toast" id="toast" role="status"></div>
 <script src="config.js"></script>
 <script src="lib/supabase.js"></script>
-<script src="data.js?v=33"></script>
-<script src="lib/planning.js?v=33"></script>
+<script src="data.js?v=34"></script>
+<script src="lib/planning.js?v=34"></script>
 <script>
 {
 /* ---------- Référentiel ---------- */
@@ -271,7 +273,7 @@ function render(){
  if(!ok){$('#main').innerHTML=S.me?vWait():'<p class="mute">Chargement…</p>';return}
  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===S.view));
  const m=$('#main');
- m.innerHTML=({planning:vPlanning,rdv:vRdv,plan:vPlan,synth:vSynth,amiante:vAm,hist:vHist,export:vExport,reglages:vReg,activite:vAct}[S.view]||vPlan)();
+ m.innerHTML=(lbHtml())+({planning:vPlanning,rdv:vRdv,plan:vPlan,synth:vSynth,amiante:vAm,hist:vHist,photos:vPhotos,export:vExport,reglages:vReg,activite:vAct}[S.view]||vPlan)();
   if(S.view==='planning'){const sc=$('#gtScroll');if(sc){if(S.plSL!=null)sc.scrollLeft=S.plSL;else planScrollToday();sc.onscroll=()=>{S.plSL=sc.scrollLeft}}}
  if(S.open)renderSheet();
 }
@@ -364,7 +366,7 @@ function vPlanGantt(){
  let left='',body='';for(const g of rows){left+=`<div class="gtw">Tour ${g.t}</div>`;body+=`<div class="gtwb" style="width:${W}px"></div>`;
   for(const id of g.ids){const z=Z[id];left+=`<a href="#planning" data-z="${id}" class="glab">${id}<span class="tw"> ${niv(z.lvl)}</span></a>`;let bars='';for(const ph of phs){const x=(P.byLog[id]||{})[ph];if(!x)continue;x.steps.forEach((st,k)=>{bars+=bar(id,ph,st,k,x.steps.length)})}body+=`<div class="grow" style="width:${W}px">${bars}</div>`}}
  const ents=[];for(const ph of phs)for(const x of (P.model.tpl||[]).filter(q=>q.phase===ph))if(!ents.includes(x.ent))ents.push(x.ent);
- return `<div class="bar"><button class="btn" id="plToday">Aller à aujourd’hui</button><div class="legend" style="margin:0">${ents.map(e=>`<span><i style="background:${entC(e)}"></i>${esc(e)}</span>`).join('')}<span><i style="background:#fff;outline:2px solid #d6331f"></i>en retard</span><span><i style="background:#999;opacity:.45"></i>terminé</span><span><i style="background-color:#f2b705;background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.75) 0 2px,transparent 2px 5px)"></i>rayé : RDV locataire non confirmé</span></div></div>
+ return `<div class="bar"><button class="btn" id="plToday">Aller à aujourd’hui</button><button class="btn pri" id="plPdf">Export PDF</button><div class="legend" style="margin:0">${ents.map(e=>`<span><i style="background:${entC(e)}"></i>${esc(e)}</span>`).join('')}<span><i style="background:#fff;outline:2px solid #d6331f"></i>en retard</span><span><i style="background:#999;opacity:.45"></i>terminé</span><span><i style="background-color:#f2b705;background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.75) 0 2px,transparent 2px 5px)"></i>rayé : RDV locataire non confirmé</span></div></div>
  <div class="gantt" id="gtScroll" style="--lw:${LW}px"><div class="gcorner">Logement</div><div class="ghead" style="width:${W}px"><div class="gwr">${wkH}</div><div class="gdr">${dyH}</div></div>
  <div class="gleft">${left}</div><div class="gbody" style="width:${W}px">${bg}${body}</div></div>
  <p class="note">Une ligne par logement, dans l’ordre des numéros : les barres forment l’escalier de chaque intervention ; un logement déplacé dans l’ordre de passage apparaît en décalé. Barre fine : plusieurs entreprises dans le même logement (salle de bain). Touchez une barre ou un numéro pour ouvrir la fiche.</p>`;
@@ -507,15 +509,34 @@ const tOf=(id,tid)=>TPL[Z[id].kind].find(t=>t.id===tid);
 function vHist(){
  const H=allHist().filter(h=>Z[h.id]&&(!S.hT||Z[h.id].tower===S.hT)&&(!S.hL||(tOf(h.id,h.task)||{}).lot===S.hL));names(H.slice(0,200).map(h=>h.by));
  return `<div class="bar"><select id="hT" class="f" style="max-width:160px"><option value="">Toutes les tours</option>${Object.keys(TOW).map(t=>`<option ${S.hT===t?'selected':''} value="${t}">Tour ${t}</option>`).join('')}</select><select id="hL" class="f" style="max-width:280px"><option value="">Tous les lots</option>${LOTK.map(l=>`<option ${S.hL===l?'selected':''} value="${l}">${l} · ${esc(LOTS[l])}</option>`).join('')}</select><span class="mute">${H.length} relevé(s)</span></div>
- <div class="hist">${H.slice(0,200).map(h=>{const t=tOf(h.id,h.task);return `<div class="card"><b>${esc(Z[h.id].name)}</b> · ${esc(t?t.lot+' '+t.label:h.task)}<br><b>${esc(valTxt(t,h,h.id))}</b>${h.amOk?' · mode opératoire amiante appliqué':''}<div class="mute">${fmtD(h.at)} · ${esc(who(h))}</div>${h.c?`<div>${esc(h.c)}</div>`:''}${h.ph&&h.ph.length?`<div class="ph">${h.ph.map(p=>`<img src="${esc(phSrc(p))}" alt="Photo">`).join('')}</div>`:''}</div>`}).join('')||'<p class="mute">Aucun relevé pour l’instant. Ouvrez un logement depuis le plan pour saisir le premier.</p>'}</div>`;
+ <div class="hist">${H.slice(0,200).map(h=>{const t=tOf(h.id,h.task);return `<div class="card"><b>${esc(Z[h.id].name)}</b> · ${esc(t?t.lot+' '+t.label:h.task)}<br><b>${esc(valTxt(t,h,h.id))}</b>${h.amOk?' · mode opératoire amiante appliqué':''}<div class="mute">${fmtD(h.at)} · ${esc(who(h))}</div>${h.c?`<div>${esc(h.c)}</div>`:''}${phL(h.ph).length?`<div class="ph">${phL(h.ph).map(p=>`<img src="${esc(phSrc(p))}" alt="Photo" data-lb="${esc(p)}">`).join('')}</div>`:''}</div>`}).join('')||'<p class="mute">Aucun relevé pour l’instant. Ouvrez un logement depuis le plan pour saisir le premier.</p>'}</div>`;
 }
+const phL=a=>{const del=new Set((S.cfg&&S.cfg.phDel)||[]);return (a||[]).filter(p=>!del.has(p))};
+function vPhotos(){
+ const adm=prof.role==='admin';const T=S.gT||'',E=S.gE||'',Lo=S.gL||'';
+ const all=[];for(const h of allHist()){if(!Z[h.id])continue;for(const p of phL(h.ph))all.push({p,h})}
+ const ents=[...new Set(all.map(x=>who(x.h)))].sort();
+ const list=all.filter(({h})=>(!T||Z[h.id].tower===T)&&(!E||who(h)===E)&&(!Lo||(tOf(h.id,h.task)||{}).lot===Lo));
+ const n=S.gN||60;
+ const card=({p,h})=>{const t=tOf(h.id,h.task);return `<figure class="gph"><img src="${esc(phSrc(p))}" alt="Photo ${esc(h.id)}" data-lb="${esc(p)}" loading="lazy"><figcaption><b>${esc(Z[h.id].kind==='LOG'?h.id:Z[h.id].name)}</b> · ${esc(t?t.lot+' '+t.label:h.task)}<br><span class="tw">${esc(who(h))} · ${fmtD(h.at)}</span>${adm?`<br><button class="btn rvb ${S.phConf===p?'on':''}" data-phdel="${esc(p)}" style="${S.phConf===p?'background:#b3001b;border-color:#b3001b;color:#fff':''}">${S.phConf===p?'Confirmer la suppression':'Supprimer'}</button>`:''}</figcaption></figure>`};
+ return `<div class="card"><h2>Photos des entreprises</h2>
+ <div class="bar"><select id="gT" class="f" style="width:auto"><option value="">Toutes les tours</option>${Object.keys(TOW).map(t=>`<option value="${t}" ${T===t?'selected':''}>Tour ${t}</option>`).join('')}</select>
+ <select id="gE" class="f" style="width:auto"><option value="">Toutes les entreprises</option>${ents.map(e=>`<option ${E===e?'selected':''}>${esc(e)}</option>`).join('')}</select>
+ <select id="gL" class="f" style="width:auto"><option value="">Tous les lots</option>${LOTK.map(l=>`<option value="${l}" ${Lo===l?'selected':''}>${l} · ${esc(LOTS[l]||'')}</option>`).join('')}</select></div>
+ <p class="mute">${list.length} photo(s), de la plus récente à la plus ancienne. Touchez une photo pour l’agrandir.${adm?' Supprimer : deux appuis, la photo est effacée définitivement.':''}</p>
+ <div class="gal">${list.slice(0,n).map(card).join('')||'<p class="mute">Aucune photo sur cette sélection.</p>'}</div>
+ ${list.length>n?`<button class="btn" id="gMore" style="margin-top:10px">Afficher plus de photos</button>`:''}</div>`;
+}
+async function delPhoto(p){const {error}=await sb.storage.from('photos').remove([p]);if(error){toast('Suppression refusée : '+errMsg(error));return}S.phConf=null;if(S.lb===p)S.lb=null;await putCfg({...S.cfg,phDel:[...((S.cfg&&S.cfg.phDel)||[]),p]});toast('Photo supprimée.')}
+function lbHtml(){if(!S.lb)return '';const it=allHist().find(h=>(h.ph||[]).includes(S.lb));const t=it&&tOf(it.id,it.task);return `<div class="lb" id="lbX" role="dialog" aria-label="Photo"><img src="${esc(phSrc(S.lb))}" alt="Photo"><div class="lbc">${it?`<b>${esc(it.id)}</b> · ${esc(t?t.lot+' '+t.label:it.task)} · ${esc(who(it))} · ${fmtD(it.at)}`:''}<button class="btn" id="lbClose">Fermer</button>${prof.role==='admin'?`<button class="btn ${S.phConf===S.lb?'on':''}" data-phdel="${esc(S.lb)}" style="${S.phConf===S.lb?'background:#b3001b;border-color:#b3001b;color:#fff':''}">${S.phConf===S.lb?'Confirmer la suppression':'Supprimer'}</button>`:''}</div></div>`}
 function vExport(){
  const t=S.exT||S.tower;S.exSel=S.exSel||{};
  return `<div class="card"><h2>Export PDF de plusieurs étages</h2><p class="mute">Un seul fichier : pour chaque niveau choisi, le plan colorié, les pourcentages et les remarques en cours. Choisissez un lot pour n’exporter que son avancement et ses remarques.</p>
  <div class="bar seg">${Object.keys(TOW).map(x=>`<button class="chip" data-ext="${x}" aria-pressed="${x===t}">Tour ${x}</button>`).join('')}</div>
  <div class="bar"><label for="exLot">Entreprise ou lot</label><select id="exLot" class="f" style="max-width:340px"><option value="">Tous les lots</option><optgroup label="Par entreprise">${(S.ent||[]).map(e=>`<option value="E:${esc(e.id)}" ${S.exLot==='E:'+e.id?'selected':''}>${esc(e.nom)} (lots ${esc((e.lots||[]).join(', '))})</option>`).join('')}</optgroup><optgroup label="Par lot">${LOTK.map(l=>`<option value="${l}" ${S.exLot===l?'selected':''}>${esc(lotLab(l))}</option>`).join('')}</optgroup></select></div>
  <div class="bar seg">${lvlList(t).map(n=>`<label class="chip"><input type="checkbox" data-exl="${n}" ${S.exSel[t+n]?'checked':''}> ${niv(n)}</label>`).join('')}</div>
- <div class="btns"><button class="btn" id="exAll">Tous les niveaux</button><button class="btn pri" id="exGo">Générer le PDF</button></div><p class="note" id="exMsg"></p></div>`;
+ <div class="btns"><button class="btn" id="exAll">Tous les niveaux</button><button class="btn pri" id="exGo">Générer le PDF</button></div><p class="note" id="exMsg"></p></div>
+ <div class="card" style="margin-top:14px"><h2>Export PDF du planning</h2><p class="mute">Gantt des logements en A3 paysage : une page par tour et par période d’environ 4 mois, barres aux couleurs des entreprises, rendez-vous non confirmés rayés, retards encadrés en rouge.</p><div class="bar"><select id="plPdfP" class="f" style="width:auto"><option value="">Toutes les interventions</option>${PH.map(p=>`<option value="${p}" ${S.plP===p?'selected':''}>${esc(PHN[p])}</option>`).join('')}</select><button class="btn pri" id="plPdf">Export PDF</button></div></div>`;
 }
 const ROLES={admin:'Administrateur',saisie:'Saisie',cons:'Consultation',attente:'En attente'};
 const parseTaches=v=>[...new Set(String(v).split(/[\s,;]+/).map(x=>x.trim().toUpperCase()).filter(x=>TASKN[x]))];
@@ -546,7 +567,7 @@ const rdvOf=(id,ph)=>(((attrs(id).rdv)||{})[ph])||{};
 async function setRdv(id,ph,patch){const cur={...(attrs(id).rdv||{})};const r={...(cur[ph]||{}),...patch,by:prof.label,at:new Date().toISOString()};const h=(r.h||[]).slice(-9);h.push({st:r.st||'',d:r.d||'',cr:r.cr||'',by:r.by,at:r.at});r.h=h;cur[ph]=r;await saveAttrs(id,{rdv:cur})}
 const addDays=(iso,n)=>TP.numToIso(TP.isoToNum(iso)+n);
 function vRdv(){
- const P=planComp();const adm=prof.role==='admin';const ph=S.rvP||'P1',tw=S.rvT||'',per=S.rvPer||'30',fs=S.rvS||'';const T=todayIso();
+ const P=planComp();const adm=prof.role==='admin';const ph=S.rvP||'P1',tw=S.rvT||'',per=S.rvPer||'all',fs=S.rvS||'';const T=todayIso();
  let rows=[];for(const t of ['D','C','B','A']){if(tw&&t!==tw)continue;const L=P.L[ph+'|'+t];if(!L)continue;for(const x of L.list){const r=rdvOf(x.id,ph);rows.push({id:x.id,x,r,st:r.st||'',lim:addDays(x.s.d,-15)})}}
  rows.sort((a,b)=>(a.x.s.d+(a.x.s.pm?'1':'0')).localeCompare(b.x.s.d+(b.x.s.pm?'1':'0')));
  const inPer=r=>per==='all'?true:per==='late'?(r.st!=='confirme'&&r.lim<=T&&r.x.e.d>=T):r.x.s.d<=addDays(T,+per)&&r.x.e.d>=T;
@@ -647,6 +668,51 @@ const loadImg=src=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(
 function drawAm(g,k,x,y,s){g.save();g.translate(x,y);g.scale(s,s);g.beginPath();g.moveTo(.5,.04);g.lineTo(.97,.9);g.lineTo(.03,.9);g.closePath();g.fillStyle='#ffcf33';g.fill();g.lineWidth=.07;g.strokeStyle='#111';g.stroke();g.fillStyle='#111';
  if(k==='S')g.fillRect(.22,.66,.56,.14);else if(k==='V')g.fillRect(.43,.34,.14,.46);else{g.fillRect(.34,.42,.32,.1);g.lineWidth=.05;g.beginPath();g.moveTo(.5,.56);g.lineTo(.5,.78);g.moveTo(.42,.7);g.lineTo(.5,.78);g.lineTo(.58,.7);g.stroke()}g.restore()}
 function hexOf(css){const c=document.createElement('canvas').getContext('2d');c.fillStyle=css;return c.fillStyle}
+const rgb=css=>{const h=hexOf(css).replace('#','');return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16))};
+async function exportPlanPdf(btn){
+ const P=planComp();if(P.err){toast('Planning illisible.');return}
+ const phs=S.plP?[S.plP]:PH,c=planCfg(),T=todayIso();if(btn){btn.disabled=true;btn.textContent='Préparation…'}
+ try{const {jsPDF}=await loadJsPDF();let logo=null;try{const li=await loadImg('logo.png');const lc=document.createElement('canvas');lc.width=li.width;lc.height=li.height;lc.getContext('2d').drawImage(li,0,0);logo=lc.toDataURL('image/png')}catch(x){}
+  const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a3'});const PW=420,PHh=297,M=8,LW=24,TOP=34,BOT=20,DW=4.2;const today=new Date().toLocaleDateString('fr-FR');
+  const off=new Map();for(const f of c.model.feries)off.set(f.d,f.label||'Jour férié');for(const o of c.off)if(!o.ent){let n=TP.isoToNum(o.d);const e=TP.isoToNum(o.f||o.d);for(;n<=e;n++)off.set(TP.numToIso(n),(OFFT[o.type]||o.type))}
+  const ents=[];for(const ph of phs)for(const x of (P.model.tpl||[]).filter(q=>q.phase===ph))if(!ents.includes(x.ent))ents.push(x.ent);
+  const perPage=Math.floor((PW-2*M-LW)/DW);let page=0;
+  const stripes=(x0,y0,x1,y1)=>{pdf.setDrawColor(255);pdf.setLineWidth(.35);for(let k=x0-(y1-y0);k<x1;k+=1.3){const lo=Math.max(x0,k),hi=Math.min(x1,k+(y1-y0));if(hi>lo)pdf.line(lo,y0+(lo-k),hi,y0+(hi-k))}};
+  for(const t of ['D','C','B','A']){
+   const ids=Object.values(Z).filter(z=>z.kind==='LOG'&&z.tower===t).map(z=>z.id).sort().filter(id=>phs.some(ph=>(P.byLog[id]||{})[ph]));if(!ids.length)continue;
+   const ds=[];for(const id of ids)for(const ph of phs){const x=(P.byLog[id]||{})[ph];if(x)for(const st of x.steps)ds.push(st.s.d,st.e.d)}ds.sort();
+   const cols=[];for(let n=TP.isoToNum(monday(ds[0]));n<=TP.isoToNum(ds[ds.length-1]);n++){const wd=new Date(n*86400000).getUTCDay();if(wd&&wd!==6)cols.push(n)}
+   const RH=Math.min(6,(PHh-TOP-BOT)/ids.length);
+   for(let c0=0;c0<cols.length;c0+=perPage){const cs=cols.slice(c0,c0+perPage);const ci=new Map(cs.map((n,k)=>[n,k]));if(page++)pdf.addPage();
+    const X0=M+LW;
+    // bandeau
+    pdf.setFillColor(231,29,51);pdf.rect(0,0,PW,18,'F');if(logo)pdf.addImage(logo,'PNG',4,1.5,24,15);pdf.setTextColor(255);pdf.setFont('helvetica','bold');pdf.setFontSize(16);pdf.text('Résidence Le Treuil',logo?32:8,11.5);
+    pdf.setFontSize(12);pdf.text(`Planning logements · Tour ${t} · ${S.plP?PHN[S.plP]:'toutes interventions'} · du ${fdl({d:TP.numToIso(cs[0])})} au ${fdl({d:TP.numToIso(cs[cs.length-1])})}`,PW-8,11.5,{align:'right'});
+    // en-têtes semaines / jours
+    pdf.setTextColor(20);pdf.setFontSize(7);let i=0;while(i<cs.length){const m=monday(TP.numToIso(cs[i]));let j=i;while(j<cs.length&&monday(TP.numToIso(cs[j]))===m)j++;pdf.setFillColor(m===monday(T)?231:30,m===monday(T)?29:30,m===monday(T)?51:30);pdf.rect(X0+i*DW,21,(j-i)*DW,5,'F');pdf.setTextColor(255);pdf.setFont('helvetica','bold');if((j-i)*DW>14)pdf.text(`S${isoWeek(m)} · ${m.slice(8,10)}/${m.slice(5,7)}`,X0+i*DW+1,24.6);i=j}
+    pdf.setFont('helvetica','normal');pdf.setFontSize(5.5);pdf.setTextColor(60);
+    cs.forEach((n,k)=>{const d=TP.numToIso(n);const x=X0+k*DW;if(off.has(d)){pdf.setFillColor(225,225,225);pdf.rect(x,27,DW,ids.length*RH+5,'F')}if(d===T){pdf.setFillColor(231,29,51);pdf.rect(x,26,DW,5,'F');pdf.setTextColor(255)}else pdf.setTextColor(60);pdf.text(String(+d.slice(8,10)),x+DW/2,30,{align:'center'});
+     if(new Date(n*86400000).getUTCDay()===1){pdf.setDrawColor(150);pdf.setLineWidth(.2);pdf.line(x,26,x,TOP+ids.length*RH)}});
+    pdf.setFont('helvetica','bold');pdf.setFontSize(8);pdf.setTextColor(20);pdf.text('Logement',M,30);
+    // lignes
+    ids.forEach((id,r)=>{const y=TOP+r*RH;pdf.setDrawColor(225);pdf.setLineWidth(.1);pdf.line(M,y+RH,X0+cs.length*DW,y+RH);pdf.setFont('helvetica','bold');pdf.setFontSize(Math.min(8,RH*1.6));pdf.setTextColor(20);pdf.text(id,M,y+RH*.72);pdf.setFont('helvetica','normal');pdf.setTextColor(110);pdf.text(niv(Z[id].lvl),M+10,y+RH*.72);
+     for(const ph of phs){const x=(P.byLog[id]||{})[ph];if(!x)continue;const nl=x.steps.length,h=(RH-1)/nl;const s2=planState(id,ph,x);const late=s2.l.startsWith('En retard')||s2.l.startsWith('Échéance');const done=s2.l==='Terminé';const nr=rdvOf(id,ph).st!=='confirme';
+      x.steps.forEach((st,ln)=>{const C=P.comp.calFor(st.ent);const a=TP.isoToNum(st.s.d),e=TP.isoToNum(st.e.d);const segs=[];let cur=null;for(let n=a;n<=e;n++){if(!C.isWork(n)||!ci.has(n)){cur=null;continue}const k=ci.get(n);let l=X0+k*DW,rr=X0+(k+1)*DW;if(n===a&&st.s.pm)l+=DW/2;if(n===e&&!st.e.pm)rr-=DW/2;if(cur&&Math.abs(cur.r-l)<.01)cur.r=rr;else{cur={l,r:rr};segs.push(cur)}}
+       let col=rgb(entC(st.ent));if(done)col=col.map(v=>Math.round(v+(255-v)*.6));
+       for(const g of segs){const y0=y+.5+ln*h,w=Math.max(.8,g.r-g.l-.3);pdf.setFillColor(...col);pdf.rect(g.l,y0,w,h-.2,'F');if(nr&&!done)stripes(g.l,y0,g.l+w,y0+h-.2);if(late){pdf.setDrawColor(214,51,31);pdf.setLineWidth(.4);pdf.rect(g.l,y0,w,h-.2,'S')}}})}});
+    const tk=ci.get(TP.isoToNum(T));if(tk!=null){pdf.setDrawColor(231,29,51);pdf.setLineWidth(.5);pdf.line(X0+tk*DW+DW/2,31,X0+tk*DW+DW/2,TOP+ids.length*RH)}
+    // légende
+    let lx=M;const ly=PHh-10;pdf.setFontSize(8);pdf.setFont('helvetica','normal');
+    for(const e of ents){pdf.setFillColor(...rgb(entC(e)));pdf.rect(lx,ly-3,5,3.5,'F');pdf.setTextColor(30);pdf.text(e,lx+6.5,ly);lx+=10+pdf.getTextWidth(e)}
+    pdf.setFillColor(242,183,5);pdf.rect(lx,ly-3,5,3.5,'F');stripes(lx,ly-3,lx+5,ly+.5);pdf.text('rayé : RDV locataire non confirmé',lx+6.5,ly);lx+=12+pdf.getTextWidth('rayé : RDV locataire non confirmé');
+    pdf.setDrawColor(214,51,31);pdf.setLineWidth(.4);pdf.rect(lx,ly-3,5,3.5,'S');pdf.text('en retard',lx+6.5,ly);lx+=12+pdf.getTextWidth('en retard');
+    pdf.setFillColor(225,225,225);pdf.rect(lx,ly-3,5,3.5,'F');pdf.text('jour non travaillé',lx+6.5,ly);lx+=12+pdf.getTextWidth('jour non travaillé');
+    pdf.setFillColor(231,29,51);pdf.rect(lx+2,ly-3,.6,3.5,'F');pdf.text("aujourd'hui",lx+4,ly);
+    pdf.setTextColor(120);pdf.text(`Édité le ${today} · page ${page}`,PW-8,ly,{align:'right'})}}
+  pdf.save(`Le_Treuil_planning_${S.plP?'intervention_'+S.plP.slice(1)+'_':''}${T}.pdf`);toast('PDF du planning prêt.')}
+ catch(e){console.error(e);toast('Export du planning interrompu.')}
+ finally{if(btn){btn.disabled=false;btn.textContent='Export PDF'}}
+}
 async function doExport(){
  const t=S.exT||S.tower,EX=S.exLot||'',EE=EX.startsWith('E:')?(S.ent||[]).find(e=>'E:'+e.id===EX):null,L=EE?EE.lots:EX,LT=EE?EE.nom+' (lots '+EE.lots.join(', ')+')':(EX?'Lot '+EX+' '+LOTS[EX]:'');const lv=lvlList(t).filter(n=>S.exSel[t+n]);const msg=$('#exMsg');
  if(!lv.length){msg.textContent='Cochez au moins un niveau.';return}
@@ -670,7 +736,12 @@ async function doExport(){
 
 /* ---------- Événements ---------- */
 document.addEventListener('click',async e=>{
- const b=e.target.closest('button,a,polygon,label.chip');if(!b)return;
+ const b=e.target.closest('button,a,polygon,label.chip,img[data-lb],#lbX');if(!b)return;
+ if(b.dataset.lb){S.lb=b.dataset.lb;S.phConf=null;render();return}
+ if(b.id==='lbClose'||b.id==='lbX'){S.lb=null;S.phConf=null;render();return}
+ if(b.dataset.phdel){if(prof.role!=='admin')return;const p=b.dataset.phdel;if(S.phConf!==p){S.phConf=p;render();return}await delPhoto(p);return}
+ if(b.id==='gMore'){S.gN=(S.gN||60)+60;render();return}
+ if(b.id==='plPdf'){exportPlanPdf(b);return}
  if(b.id==='lo'){await sb.auth.signOut();return}
  if(b.id==='rf'){await loadAll();toast('Données actualisées.');return}
  if(b.id==='lo2'){await sb.auth.signOut();return}
@@ -771,7 +842,9 @@ document.addEventListener('change',async e=>{const el=e.target;
  if(el.id==='aAm'){saveAttrs(S.open,{am:el.value});return}
  if(el.dataset.cad){if(!S.cadEd)S.cadEd=JSON.parse(JSON.stringify(planCfg().model));const [i,k]=el.dataset.cad.split('|');const t=S.cadEd.tasks[+i];if(k==='imp')t.imp=el.value?TP.isoToNum(el.value):null;else t[k]=el.value===''?null:Math.max(0,+el.value);render();return}
  if(el.dataset.tpl){if(!S.cadEd)S.cadEd=JSON.parse(JSON.stringify(planCfg().model));const [i,k]=el.dataset.tpl.split('|');const x=S.cadEd.tpl[+i];x[k]=k==='lien'?el.value:Math.max(k==='dur'?0.5:0,+el.value||0);render();return}
+ if(el.id==='plPdfP'){S.plP=el.value;return}
  if(el.id==='rvPer'){S.rvPer=el.value;render();return}
+ if(el.id==='gT'||el.id==='gE'||el.id==='gL'){S[el.id]=el.value;S.gN=60;render();return}
  if(el.id==='rvS'){S.rvS=el.value;render();return}
  if(el.dataset.rvd){await setRdv(el.dataset.rvd,S.rvP||'P1',{d:el.value});return}
  if(el.dataset.rvc){await setRdv(el.dataset.rvc,S.rvP||'P1',{cr:el.value});return}
@@ -793,7 +866,7 @@ document.addEventListener('submit',async e=>{e.preventDefault();
  if(e.target.id==='entF'){const nom=$('#eN').value.trim(),pin=$('#eP').value.trim();if(!/^\d{4}$/.test(pin)){$('#entMsg').textContent='Le code doit comporter 4 chiffres.';return}const {error}=await sb.rpc('admin_create_entreprise',{p_nom:nom,p_pin:pin,p_role:$('#eR').value,p_lots:parseLots($('#eL').value),p_taches:parseTaches($('#eT').value)});if(error){$('#entMsg').textContent=errMsg(error);return}await loadEnt();render();const m=$('#entMsg');if(m){m.innerHTML=`<div class="amw">« ${esc(nom)} » créée avec le code <b>${esc(pin)}</b>. Notez-le et transmettez-le à l’entreprise.</div>`}return}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.open)closeSheet()});
-window.addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(v&&v!==S.view&&['plan','planning','rdv','synth','amiante','hist','export','reglages','activite'].includes(v)){S.view=v;render()}});
+window.addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(v&&v!==S.view&&['plan','planning','rdv','synth','amiante','hist','photos','export','reglages','activite'].includes(v)){S.view=v;render()}});
 
 function loadXlsx(){return new Promise((res,rej)=>{if(window.XLSX)return res(window.XLSX);const sc=document.createElement('script');sc.src='lib/xlsx.mini.min.js';sc.onload=()=>res(window.XLSX);sc.onerror=rej;document.head.appendChild(sc)})}
 const nrm=x=>String(x??'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim();
