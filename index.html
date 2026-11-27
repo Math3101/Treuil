@@ -129,7 +129,7 @@ label.chk input{width:22px;height:22px;flex:none}
 <body>
 <header>
   <img class="logo" src="logo-h.png" alt="GBMP Bâtiment" width="76" height="48">
-  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v31</span></span></div>
+  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v32</span></span></div>
   <div class="who" id="who"></div>
 </header>
 <nav role="tablist" id="tabs" hidden>
@@ -148,8 +148,8 @@ label.chk input{width:22px;height:22px;flex:none}
 <div class="toast" id="toast" role="status"></div>
 <script src="config.js"></script>
 <script src="lib/supabase.js"></script>
-<script src="data.js?v=31"></script>
-<script src="lib/planning.js?v=31"></script>
+<script src="data.js?v=32"></script>
+<script src="lib/planning.js?v=32"></script>
 <script>
 {
 /* ---------- Référentiel ---------- */
@@ -306,9 +306,10 @@ const fdl=x=>x?x.d.slice(8,10)+'/'+x.d.slice(5,7)+'/'+x.d.slice(2,4)+(x.pm?' (ap
 const planCfg=()=>{const p=(S.cfg&&S.cfg.plan)||{};return{model:p.model||PLAN0,off:p.off||[],order:p.order||{}}};
 function planEligible(ph,t){const ids=Object.values(Z).filter(z=>z.kind==='LOG'&&z.tower===t).map(z=>z.id).sort();return ph==='P2'?ids.filter(id=>attrs(id).sdb):ids}
 function planIds(ph,t){const el=planEligible(ph,t),set=new Set(el),o=(planCfg().order[ph+'|'+t]||[]).filter(id=>set.has(id));return o.concat(el.filter(id=>!o.includes(id)))}
-function planComp(){const c=planCfg();const key=JSON.stringify([c,Object.values(Z).filter(z=>z.kind==='LOG'&&attrs(z.id).sdb).map(z=>z.id)]);if(S.pc&&S.pc.key===key)return S.pc;
+function planPins(ph){const o={};for(const z of Object.values(Z)){if(z.kind!=='LOG')continue;const r=rdvOf(z.id,ph);if(r.st==='confirme'&&r.d)o[z.id]={d:r.d,pm:r.cr==='a'}}return o}
+function planComp(){const c=planCfg();const pins={};for(const ph of PH)pins[ph]=planPins(ph);const key=JSON.stringify([c,pins,Object.values(Z).filter(z=>z.kind==='LOG'&&attrs(z.id).sdb).map(z=>z.id)]);if(S.pc&&S.pc.key===key)return S.pc;
  let comp=null,err=null;try{comp=TP.compute(c.model,c.off)}catch(e){err=e.message}const L={},byLog={};
- if(comp)for(const ph of PH)for(const t of Object.keys(TOW)){const r=TP.logements(c.model,comp,ph,t,planIds(ph,t));L[ph+'|'+t]=r;if(r)for(const x of r.list)(byLog[x.id]||(byLog[x.id]={}))[ph]=x}
+ if(comp)for(const ph of PH)for(const t of Object.keys(TOW)){const r=TP.logements(c.model,comp,ph,t,planIds(ph,t),pins[ph]);L[ph+'|'+t]=r;if(r)for(const x of r.list)(byLog[x.id]||(byLog[x.id]={}))[ph]=x}
  S.pc={key,comp,L,byLog,err,model:c.model};return S.pc}
 function interOf(ph){const g=INTER[PH.indexOf(ph)];return g?g.t.map(id=>TPL.LOG.find(t=>t.id===id)).filter(Boolean):[]}
 function planState(id,ph,x){const ts=interOf(ph).filter(t=>!(isSdb(t)&&!attrs(id).sdb));const r=aggT(id,ts);const T=todayIso();
@@ -323,11 +324,11 @@ function vPlanningOld(){
   body=`<div class="scroll"><table class="pl"><thead><tr><th>Logement</th><th>Niveau</th>${PH.map(p=>`<th>${esc(PHN[p])}<br><span class="tw">${(l=>l?fdl({d:l.tower.s})+' → '+fdl({d:l.tower.e}):'')(P.L[p+'|'+t])}</span></th>`).join('')}</tr></thead><tbody>${ids.map(id=>`<tr><td><a href="#planning" data-z="${id}">${id}</a></td><td>${niv(Z[id].lvl)}</td>${PH.map(p=>{const x=(P.byLog[id]||{})[p];if(!x)return `<td class="tw">${p==='P2'?(attrs(id).sdbConf==='renovee'?'SdB déjà rénovée':'—'):'—'}</td>`;const s=planState(id,p,x);return `<td><span class="pd2" style="background:${s.c}"></span>${fd(x.s)} → ${fd(x.e)}<br><span class="tw">${esc(s.l)}</span></td>`}).join('')}</tr>`).join('')}</tbody></table></div>`}
  else{const L=P.L[ph+'|'+t];if(!L)body='<p class="mute">Pas de tâche pour cette tour dans le planning.</p>';else{
   const warn=L.qte&&L.qte!==L.list.length?`<div class="amw">Le planning prévoit ${L.qte} logements pour cette tour ; ${L.list.length} sont concernés dans l’outil${ph==='P2'?' (logements avec réfection de salle de bain)':''}.</div>`:'';
-  body=`<p class="mute">Tour ${t} · ${esc(L.main.label)} · prévu du <b>${fdl({d:L.tower.s})}</b> au <b>${fdl({d:L.tower.e})}</b> · cadence ${String(Math.round(L.cad*10)/10).replace('.',',')} j.o. par logement · dernier logement fini le <b>${L.list.length?fdl(L.list[L.list.length-1].e):'—'}</b></p>${warn}
+  body=`<p class="mute">Tour ${t} · ${esc(L.main.label)} · prévu du <b>${fdl({d:L.tower.s})}</b> au <b>${fdl({d:L.tower.e})}</b> · cadence ${String(Math.round(L.cad*10)/10).replace('.',',')} j.o. par logement · dernier logement fini le <b>${L.last?fdl(L.last):'—'}</b></p>${warn}
   ${adm?`<p class="note">Ordre de passage : tapez l’ordre voulu ci-dessous, ou utilisez ↑ ↓ pour déplacer un logement et ⇅ sur deux logements pour les inverser. Les dates se recalculent aussitôt.</p>
   <div class="bar"><input type="text" id="ordTxt" placeholder="ex. D01, D03, D04, D02" style="max-width:360px"><label class="chk"><input type="checkbox" id="ordAll"> pour toutes les interventions de la tour</label><button class="btn pri" id="ordGo">Appliquer cet ordre</button></div>
   <p class="note">Seuls les logements tapés changent de place, entre eux ; les autres gardent la leur. Exemple : « D01, D03, D04, D02 » fait passer D03 et D04 avant D02.</p>`:''}
-  <div class="scroll"><table class="pl"><thead><tr><th>#</th><th>Logement</th><th>Niveau</th><th>Début</th><th>Fin</th><th>Entreprises</th><th>État</th>${adm?'<th></th>':''}</tr></thead><tbody>${L.list.map((x,k)=>{const s=planState(x.id,ph,x);return `<tr class="${S.swap===x.id?'swsel':''}"><td>${k+1}</td><td><a href="#planning" data-z="${x.id}">${x.id}</a></td><td>${niv(Z[x.id].lvl)}</td><td>${fdl(x.s)}</td><td>${fdl(x.e)}</td><td class="tw">${x.steps.map(st=>`${esc(st.ent)} ${fd(st.s)}→${fd(st.e)}`).join('<br>')}</td><td><span class="pd2" style="background:${s.c}"></span>${esc(s.l)}</td>${adm?`<td style="white-space:nowrap"><button class="btn" data-pmv="${x.id}|-1" aria-label="Monter">↑</button><button class="btn" data-pmv="${x.id}|1" aria-label="Descendre">↓</button><button class="btn ${S.swap===x.id?'on':''}" data-psw="${x.id}" aria-label="Inverser">⇅</button></td>`:''}</tr>`}).join('')}</tbody></table></div>
+  <div class="scroll"><table class="pl"><thead><tr><th>#</th><th>Logement</th><th>Niveau</th><th>Début</th><th>Fin</th><th>Entreprises</th><th>État</th>${adm?'<th></th>':''}</tr></thead><tbody>${L.list.map((x,k)=>{const s=planState(x.id,ph,x);return `<tr class="${S.swap===x.id?'swsel':''}"><td>${k+1}</td><td><a href="#planning" data-z="${x.id}">${x.id}</a>${x.pin?'<br><span class="tw" style="color:#2e9e5b">📌 date du RDV</span>':''}</td><td>${niv(Z[x.id].lvl)}</td><td>${fdl(x.s)}</td><td>${fdl(x.e)}</td><td class="tw">${x.steps.map(st=>`${esc(st.ent)} ${fd(st.s)}→${fd(st.e)}`).join('<br>')}</td><td><span class="pd2" style="background:${s.c}"></span>${esc(s.l)}</td>${adm?`<td style="white-space:nowrap"><button class="btn" data-pmv="${x.id}|-1" aria-label="Monter">↑</button><button class="btn" data-pmv="${x.id}|1" aria-label="Descendre">↓</button><button class="btn ${S.swap===x.id?'on':''}" data-psw="${x.id}" aria-label="Inverser">⇅</button></td>`:''}</tr>`}).join('')}</tbody></table></div>
   ${adm&&c.order[ph+'|'+t]?`<button class="btn" id="pordR" style="margin-top:8px">Revenir à l’ordre par numéro</button>`:''}`}}
  return `<div class="card">${head}${legend}${body}</div>`;
 }
@@ -553,7 +554,7 @@ function vRdv(){
  const cnt=k=>rows.filter(inPer).filter(r=>r.st===k).length;const urg=rows.filter(r=>r.st!=='confirme'&&r.lim<=T&&r.x.e.d>=T).length;
  const sel=(id,v,o)=>`<select class="f" ${adm?'':'disabled'} data-rv="${id}" style="width:auto;padding:6px">${o}</select>`;
  const tr=list.map(({id,x,r,st,lim})=>{const ecart=r.d&&r.d!==x.s.d;return `<tr><td><a href="#rdv" data-z="${id}"><b>${id}</b></a><br><span class="tw">${niv(Z[id].lvl)} · ${Z[id].info.typo}</span></td>
-  <td>${fdl(x.s)}<br><span class="tw">→ ${fdl(x.e)}</span></td><td class="${st!=='confirme'&&lim<=T?'late':''}">${fdl({d:lim})}</td>
+  <td>${fdl(x.s)}<br><span class="tw">→ ${fdl(x.e)}</span>${x.pin?'<br><span class="tw" style="color:#2e9e5b">📌 planning recalé sur le RDV</span>':''}</td><td class="${st!=='confirme'&&lim<=T?'late':''}">${fdl({d:lim})}</td>
   <td>${adm?`<input type="date" data-rvd="${id}" value="${esc(r.d||'')}" style="width:150px;padding:6px"> <select class="f" data-rvc="${id}" style="width:auto;padding:6px">${Object.entries(CREN).map(([k,l])=>`<option value="${k}" ${(r.cr||'j')===k?'selected':''}>${l}</option>`).join('')}</select>`:(r.d?fdl({d:r.d})+' · '+(CREN[r.cr||'j']):'—')}${ecart?`<br><span class="tw" style="color:#b3001b">≠ planning (${fd(x.s)})</span>`:''}</td>
   <td><div class="btns">${Object.entries(RDVST).map(([k,l])=>`<button class="btn rvb ${st===k?'on':''}" ${adm?'':'disabled'} data-rvs="${id}|${k}" style="${st===k?`background:${RDVC[k]};border-color:${RDVC[k]};color:#fff`:''}">${l}</button>`).join('')}</div></td>
   <td>${adm?`<select class="f" data-rvp="${id}" style="width:auto;padding:6px"><option value="">—</option><option value="present" ${r.pr==='present'?'selected':''}>Locataire présent</option><option value="cles" ${r.pr==='cles'?'selected':''}>Clés remises</option></select>`:({present:'Locataire présent',cles:'Clés remises'}[r.pr]||'—')}</td>
@@ -564,7 +565,7 @@ function vRdv(){
  <select class="f" id="rvPer" style="width:auto">${[['15','Prévus dans les 15 jours'],['30','Prévus dans les 30 jours'],['60','Prévus dans les 60 jours'],['late','À prévenir en urgence'],['all','Tout le planning']].map(([k,l])=>`<option value="${k}" ${per===k?'selected':''}>${l}</option>`).join('')}</select>
  <select class="f" id="rvS" style="width:auto"><option value="">Tous les statuts</option><option value="non" ${fs==='non'?'selected':''}>Non confirmés</option>${Object.entries(RDVST).map(([k,l])=>`<option value="${k}" ${fs===k&&fs!==''?'selected':''}>${l}</option>`).join('')}</select></div>
  <div class="kpi" style="margin-bottom:10px">${Object.entries(RDVST).map(([k,l])=>`<div style="border-left:6px solid ${RDVC[k]}"><span class="mute">${l}</span><b>${cnt(k)}</b></div>`).join('')}<div style="border-left:6px solid #7a0010"><span class="mute">À prévenir en urgence</span><b>${urg}</b></div></div>
- <p class="note">« Contacter avant » = 15 jours avant le passage prévu (CCTP 00.4.9). En rouge : délai dépassé sans rendez-vous confirmé. Un rendez-vous confirmé sans date reprend la date du planning.${adm?'':' Consultation seule : la prise de rendez-vous est gérée par GBMP.'}</p>
+ <p class="note">« Contacter avant » = 15 jours avant le passage prévu (CCTP 00.4.9). En rouge : délai dépassé sans rendez-vous confirmé. Un rendez-vous confirmé sans date reprend la date du planning. <b>Un rendez-vous confirmé fixe la date du logement dans le planning</b> : l’équipe y est réservée et les autres logements s’enchaînent avant et après, sans chevauchement. Repasser le statut à « À reprogrammer » rend le logement au planning normal.${adm?'':' Consultation seule : la prise de rendez-vous est gérée par GBMP.'}</p>
  <div class="scroll"><table class="stack rvt"><thead><tr><th>Logement</th><th>Prévu au planning</th><th>Contacter avant</th><th>Rendez-vous</th><th>Statut</th><th>Présence</th><th>Note</th></tr></thead><tbody>${tr||'<tr><td colspan="7">Aucun logement sur cette sélection.</td></tr>'}</tbody></table></div></div>`;
 }
 const AMOPT=[['S','sols','Sol'],['V','murs','Paroi verticale'],['P','plafond','Plafond']];
