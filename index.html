@@ -130,7 +130,7 @@ label.chk input{width:22px;height:22px;flex:none}
 <body>
 <header>
   <img class="logo" src="logo-h.png" alt="GBMP Bâtiment" width="76" height="48">
-  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v39</span></span></div>
+  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v40</span></span></div>
   <div class="who" id="who"></div>
 </header>
 <nav role="tablist" id="tabs" hidden>
@@ -150,8 +150,8 @@ label.chk input{width:22px;height:22px;flex:none}
 <div class="toast" id="toast" role="status"></div>
 <script src="config.js"></script>
 <script src="lib/supabase.js"></script>
-<script src="data.js?v=39"></script>
-<script src="lib/planning.js?v=39"></script>
+<script src="data.js?v=40"></script>
+<script src="lib/planning.js?v=40"></script>
 <script>
 {
 /* ---------- Référentiel ---------- */
@@ -620,6 +620,7 @@ function vTaskEd(){
  <p class="note">Total d’un logement : ${fmtN(totW(all))} points, plus ${fmtN(totS(all))} points pour la réfection de salle de bain.</p>
  <div class="btns"><button class="btn pri" id="teSave">Enregistrer</button><button class="btn" id="teCancel">Annuler les modifications</button><button class="btn" id="teReset">Revenir à la liste d’origine</button></div><div id="teMsg" class="note"></div></div>`;
 }
+const hasSdbInfo=id=>{const a=attrs(id);return !!(a.sdb||a.sdbConf||a.sdbSrc||(a.sdbH||[]).length)};
 const SDBE={afaire:'À rénover',renovee:'Déjà rénovée · rien à faire',non:'Pas de réfection'};
 const sdbEtat=a=>a.sdb?'afaire':a.sdbConf==='renovee'?'renovee':'non';
 const sdbSel=(id,adm)=>{const a=attrs(id),e=sdbEtat(a);return `<select class="f" data-sdbst="${id}" ${adm?'':'disabled'} style="width:auto;padding:6px">${Object.entries(SDBE).map(([k,l])=>`<option value="${k}" ${e===k?'selected':''}>${l}</option>`).join('')}</select>`};
@@ -635,7 +636,7 @@ function vSdbTab(){const t=S.sdbT||'D',f=S.sdbF||'';const ids=Object.values(Z).f
 function vReg(){
  const adm=prof.role==='admin';
  return `<div class="regs"><div class="card"><h2>Réglages</h2><label class="chk"><input type="checkbox" id="amChk" ${S.cfg.amCheck?'checked':''} ${adm?'':'disabled'}> Exiger la case « mode opératoire amiante appliqué » avant de saisir une tâche en zone amiantée</label>
- ${adm?`<h3 style="margin-top:14px">Importer l’enquête état des lieux (Excel)</h3><p class="mute">Lit seulement les colonnes « n° logement », « configuration SDB », « équipements sdb » et « Date de réponse ». « Déjà rénovée Claircienne » : rien à faire. « D’origine » ou « modifiée par locataire » : réfection à faire. Les noms des locataires ne sont ni lus ni enregistrés. Seuls les logements présents dans le fichier sont modifiés.</p><label class="btn" style="display:inline-flex;align-items:center;gap:6px;width:max-content">Choisir le fichier Excel<input type="file" id="xlI" accept=".xlsx,.xls" style="display:none"></label><div id="xlOut"></div>
+ ${adm?`<h3 style="margin-top:14px">Importer l’enquête état des lieux (Excel)</h3><p class="mute">Lit seulement les colonnes « n° logement », « configuration SDB », « équipements sdb » et « Date de réponse ». « Déjà rénovée Claircienne » : rien à faire. « D’origine » ou « modifiée par locataire » : réfection à faire. Les noms des locataires ne sont ni lus ni enregistrés. Seuls les logements présents dans le fichier et encore sans information de salle de bain sont complétés : les informations existantes ne sont pas modifiées.</p><label class="btn" style="display:inline-flex;align-items:center;gap:6px;width:max-content">Choisir le fichier Excel<input type="file" id="xlI" accept=".xlsx,.xls" style="display:none"></label><div id="xlOut"></div>
  <h3 style="margin-top:14px">Logements avec réfection de salle de bain</h3><p class="mute">${Object.values(Z).filter(z=>z.kind==='LOG'&&attrs(z.id).sdb).length} logement(s) dans la liste. Collez la liste complète (ex. A01, A05, B12…) : elle remplace la précédente.</p><textarea id="sdbList">${Object.values(Z).filter(z=>z.kind==='LOG'&&attrs(z.id).sdb).map(z=>z.id).join(', ')}</textarea><div class="btns" style="margin-top:6px"><button class="btn pri" id="sdbGo">Appliquer la liste</button></div><div class="note" id="sdbMsg"></div>${vSdbTab()}`:''}
  <p class="note">Données : Supabase${S.loaded?' · actualisées à '+S.loaded.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):''}.</p></div>
  ${adm?vTaskEd():vTaskList()}${adm?vUsers():''}</div>`;
@@ -780,8 +781,8 @@ document.addEventListener('click',async e=>{
  if(b.id==='eGen'){$('#eP').value=rnd4();return}
  if(b.id==='actR'){await loadEnt();await loadJournal();return}
  if(b.dataset.us){const id=b.dataset.us;const nom=document.querySelector(`[data-un="${id}"]`).value.trim(),role=document.querySelector(`[data-ur="${id}"]`).value,lots=parseLots(document.querySelector(`[data-ul="${id}"]`).value),actif=document.querySelector(`[data-ua="${id}"]`).checked;const {error}=await sb.rpc('admin_update_entreprise',{p_id:id,p_nom:nom,p_role:role,p_lots:lots,p_actif:actif,p_taches:parseTaches(document.querySelector(`[data-ut="${id}"]`).value)});toast(error?errMsg(error):'Entreprise mise à jour.');await loadEnt();render();return}
- if(b.id==='xlGo'){const src='Enquête EDL'+(S.xl.some(r=>r.d)?' ('+new Date(Math.max(...S.xl.filter(r=>r.d).map(r=>+r.d))).toLocaleDateString('fr-FR')+')':'');const rows=S.xl.filter(r=>r.st&&r.st!=='autre').map(r=>({zone_id:r.id,data:{...((S.docs[r.id]&&S.docs[r.id].attrs)||{}),sdb:r.st!=='renovee',sdbConf:r.st,sdbEq:r.eq.slice(0,80),sdbSrc:src},updated_by:S.session.user.id,updated_at:new Date().toISOString()}));
-  b.disabled=true;const {error}=await sb.from('zone_attrs').upsert(rows);b.disabled=false;if(error){toast('Échec : '+errMsg(error));return}for(const r of rows)(S.docs[r.zone_id]||(S.docs[r.zone_id]={t:{},h:[]})).attrs=r.data;$('#xlOut').innerHTML=`<div class="note">${rows.length} logements mis à jour : ${rows.filter(r=>r.data.sdb).length} réfection(s) à faire.</div>`;toast('Enquête importée.');render();return}
+ if(b.id==='xlGo'){const src='Enquête EDL'+(S.xl.some(r=>r.d)?' ('+new Date(Math.max(...S.xl.filter(r=>r.d).map(r=>+r.d))).toLocaleDateString('fr-FR')+')':'');const rows=S.xl.filter(r=>r.st&&r.st!=='autre'&&!hasSdbInfo(r.id)).map(r=>({zone_id:r.id,data:{...((S.docs[r.id]&&S.docs[r.id].attrs)||{}),sdb:r.st!=='renovee',sdbConf:r.st,sdbEq:r.eq.slice(0,80),sdbSrc:src},updated_by:S.session.user.id,updated_at:new Date().toISOString()}));
+  b.disabled=true;const {error}=await sb.from('zone_attrs').upsert(rows);b.disabled=false;if(error){toast('Échec : '+errMsg(error));return}for(const r of rows)(S.docs[r.zone_id]||(S.docs[r.zone_id]={t:{},h:[]})).attrs=r.data;$('#xlOut').innerHTML=`<div class="note">${rows.length} logement(s) complété(s), dont ${rows.filter(r=>r.data.sdb).length} réfection(s) à faire. Les logements déjà renseignés n’ont pas été modifiés.</div>`;toast('Enquête importée.');render();return}
  if(b.id==='sdbGo'){const ids=[...new Set(($('#sdbList').value.toUpperCase().match(/[ABCD]\d{2}/g)||[]))];const bad=ids.filter(x=>!Z[x]);if(bad.length){$('#sdbMsg').textContent='Numéros inconnus : '+bad.join(', ');return}
   const want=new Set(ids),rows=[];for(const z of Object.values(Z)){if(z.kind!=='LOG')continue;const cur=!!attrs(z.id).sdb,w=want.has(z.id);if(cur!==w){const data={...((S.docs[z.id]&&S.docs[z.id].attrs)||{}),sdb:w};rows.push({zone_id:z.id,data,updated_by:S.session.user.id,updated_at:new Date().toISOString()})}}
   if(!rows.length){$('#sdbMsg').textContent='Aucun changement.';return}b.disabled=true;const {error}=await sb.from('zone_attrs').upsert(rows);b.disabled=false;if(error){$('#sdbMsg').textContent='Échec : '+errMsg(error);return}
@@ -889,8 +890,8 @@ document.addEventListener('change',async e=>{const el=e.target;
  if(el.id==='plNW'){S.plNW=+el.value;render();return}
  if(el.id==='plPast'){S.plPast=el.checked;render();return}
  if(el.id==='plI'){const f=el.files[0];if(!f)return;const o=$('#plMsg');o.textContent='Lecture…';try{const X=await loadXlsx();const wb=X.read(await f.arrayBuffer(),{cellDates:false});const m=TP.parseWorkbook(X,wb);if(!m.tasks.length)throw new Error('aucune tâche trouvée');TP.compute(m,[]);if(await savePlan({model:m,base:m}))toast('Planning importé : '+m.tasks.length+' tâches, '+m.feries.length+' jours fériés.')}catch(x){o.textContent='Fichier illisible : '+errMsg(x)}el.value='';return}
- if(el.id==='xlI'){const f=el.files[0];if(!f)return;const o=$('#xlOut');o.textContent='Lecture…';try{const {res,unk}=await readSurvey(f);S.xl=res;const todo=res.filter(r=>r.st&&r.st!=='renovee'),ok=res.filter(r=>r.st==='renovee'),none=res.filter(r=>!r.st||r.st==='autre');
-  o.innerHTML=`<div class="amw" style="margin-top:8px"><b>${res.length} logements trouvés</b> : ${todo.length} réfection(s) à faire, ${ok.length} déjà rénovée(s), ${none.length} sans réponse exploitable.${unk.length?' Lignes ignorées : '+esc(unk.join(', '))+'.':''}<br><b>À rénover :</b> ${esc(todo.map(r=>r.id).join(', '))||'aucun'}<br><b>Déjà rénovées :</b> ${esc(ok.map(r=>r.id).join(', '))||'aucune'}${none.length?'<br><b>Sans réponse :</b> '+esc(none.map(r=>r.id).join(', ')):''}</div><div class="btns" style="margin-top:6px"><button class="btn pri" id="xlGo">Appliquer à ces ${todo.length+ok.length} logements</button></div>`}catch(x){o.textContent='Fichier illisible : '+errMsg(x)}el.value='';return}
+ if(el.id==='xlI'){const f=el.files[0];if(!f)return;const o=$('#xlOut');o.textContent='Lecture…';try{const {res,unk}=await readSurvey(f);S.xl=res;const kept=res.filter(r=>r.st&&r.st!=='autre'&&hasSdbInfo(r.id)),fresh=res.filter(r=>!hasSdbInfo(r.id)),todo=fresh.filter(r=>r.st&&r.st!=='renovee'&&r.st!=='autre'),ok=fresh.filter(r=>r.st==='renovee'),none=res.filter(r=>!r.st||r.st==='autre');
+  o.innerHTML=`<div class="amw" style="margin-top:8px"><b>${res.length} logements trouvés</b> · nouveaux : ${todo.length} réfection(s) à faire, ${ok.length} déjà rénovée(s), ${none.length} sans réponse exploitable.${unk.length?' Lignes ignorées : '+esc(unk.join(', '))+'.':''}<br><b>À rénover :</b> ${esc(todo.map(r=>r.id).join(', '))||'aucun'}<br><b>Déjà rénovées :</b> ${esc(ok.map(r=>r.id).join(', '))||'aucune'}${none.length?'<br><b>Sans réponse :</b> '+esc(none.map(r=>r.id).join(', ')):''}${kept.length?`<br><b>Déjà renseignés, non modifiés (${kept.length}) :</b> ${esc(kept.map(r=>r.id).join(', '))}`:''}</div><p class="note">Seuls les logements sans information de salle de bain sont complétés ; les informations existantes ne sont jamais remplacées.</p>${todo.length+ok.length?`<div class="btns" style="margin-top:6px"><button class="btn pri" id="xlGo">Compléter ces ${todo.length+ok.length} logements</button></div>`:'<p class="mute">Aucun nouveau logement à compléter.</p>'}`}catch(x){o.textContent='Fichier illisible : '+errMsg(x)}el.value='';return}
  if(el.dataset.sdbst){if(prof.role!=='admin')return;askSdb(el.dataset.sdbst,el.value);return}
  if(el.id==='sdbF'){S.sdbF=el.value;render();return}
  if(el.id==='aPb'){saveAttrs(S.open,{plomb:el.value});return}
