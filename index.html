@@ -112,7 +112,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .lt td,.lt th{padding:5px 6px;white-space:nowrap}.lt td:first-child,.lt th:first-child{position:sticky;left:0;background:var(--card);z-index:1}.lt tr.tot td:first-child{background:var(--bg)}.lt .c{text-align:center}.lt .c .tw{display:block}.lt tr.tot td{background:var(--bg);border-top:2px solid var(--ink)}
 .heat td{text-align:center;font-weight:700;color:#111;border:2px solid var(--card)}
 .scroll{overflow-x:auto}
-.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px}
+.regs{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;max-width:1100px;margin:0 auto}.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px}
 .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
 .kpi div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
 .kpi b{display:block;font-size:28px;line-height:1.1}
@@ -130,7 +130,7 @@ label.chk input{width:22px;height:22px;flex:none}
 <body>
 <header>
   <img class="logo" src="logo-h.png" alt="GBMP Bâtiment" width="76" height="48">
-  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v38</span></span></div>
+  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v39</span></span></div>
   <div class="who" id="who"></div>
 </header>
 <nav role="tablist" id="tabs" hidden>
@@ -150,8 +150,8 @@ label.chk input{width:22px;height:22px;flex:none}
 <div class="toast" id="toast" role="status"></div>
 <script src="config.js"></script>
 <script src="lib/supabase.js"></script>
-<script src="data.js?v=38"></script>
-<script src="lib/planning.js?v=38"></script>
+<script src="data.js?v=39"></script>
+<script src="lib/planning.js?v=39"></script>
 <script>
 {
 /* ---------- Référentiel ---------- */
@@ -634,7 +634,7 @@ function vSdbTab(){const t=S.sdbT||'D',f=S.sdbF||'';const ids=Object.values(Z).f
  <div class="scroll"><table class="stack"><thead><tr><th>Logement</th><th>État</th><th>Origine de l’information</th></tr></thead><tbody>${ids.map(id=>{const a=attrs(id);const l=(a.sdbH||[]).slice(-1)[0];return `<tr><td><b>${id}</b><br><span class="tw">${niv(Z[id].lvl)} · ${Z[id].info.typo}</span></td><td>${sdbSel(id,true)}</td><td class="tw">${esc(a.sdbSrc||'—')}${a.sdbConf&&a.sdbConf!=='renovee'&&SDBST[a.sdbConf]?' · SdB '+esc(SDBST[a.sdbConf]):''}${l?`<br>Dernier changement : ${esc(SDBE[l.from])} → ${esc(SDBE[l.to])}`:''}</td></tr>`}).join('')||'<tr><td colspan="3">Aucun logement.</td></tr>'}</tbody></table></div>`}
 function vReg(){
  const adm=prof.role==='admin';
- return `<div class="grid2"><div class="card"><h2>Réglages</h2><label class="chk"><input type="checkbox" id="amChk" ${S.cfg.amCheck?'checked':''} ${adm?'':'disabled'}> Exiger la case « mode opératoire amiante appliqué » avant de saisir une tâche en zone amiantée</label>
+ return `<div class="regs"><div class="card"><h2>Réglages</h2><label class="chk"><input type="checkbox" id="amChk" ${S.cfg.amCheck?'checked':''} ${adm?'':'disabled'}> Exiger la case « mode opératoire amiante appliqué » avant de saisir une tâche en zone amiantée</label>
  ${adm?`<h3 style="margin-top:14px">Importer l’enquête état des lieux (Excel)</h3><p class="mute">Lit seulement les colonnes « n° logement », « configuration SDB », « équipements sdb » et « Date de réponse ». « Déjà rénovée Claircienne » : rien à faire. « D’origine » ou « modifiée par locataire » : réfection à faire. Les noms des locataires ne sont ni lus ni enregistrés. Seuls les logements présents dans le fichier sont modifiés.</p><label class="btn" style="display:inline-flex;align-items:center;gap:6px;width:max-content">Choisir le fichier Excel<input type="file" id="xlI" accept=".xlsx,.xls" style="display:none"></label><div id="xlOut"></div>
  <h3 style="margin-top:14px">Logements avec réfection de salle de bain</h3><p class="mute">${Object.values(Z).filter(z=>z.kind==='LOG'&&attrs(z.id).sdb).length} logement(s) dans la liste. Collez la liste complète (ex. A01, A05, B12…) : elle remplace la précédente.</p><textarea id="sdbList">${Object.values(Z).filter(z=>z.kind==='LOG'&&attrs(z.id).sdb).map(z=>z.id).join(', ')}</textarea><div class="btns" style="margin-top:6px"><button class="btn pri" id="sdbGo">Appliquer la liste</button></div><div class="note" id="sdbMsg"></div>${vSdbTab()}`:''}
  <p class="note">Données : Supabase${S.loaded?' · actualisées à '+S.loaded.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):''}.</p></div>
