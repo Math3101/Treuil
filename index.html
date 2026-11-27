@@ -130,7 +130,7 @@ label.chk input{width:22px;height:22px;flex:none}
 <body>
 <header>
   <img class="logo" src="logo-h.png" alt="GBMP Bâtiment" width="76" height="48">
-  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v35</span></span></div>
+  <div class="brand"><b>Résidence Le Treuil</b><span>Suivi d'avancement des travaux · <span id="appv">v36</span></span></div>
   <div class="who" id="who"></div>
 </header>
 <nav role="tablist" id="tabs" hidden>
@@ -150,8 +150,8 @@ label.chk input{width:22px;height:22px;flex:none}
 <div class="toast" id="toast" role="status"></div>
 <script src="config.js"></script>
 <script src="lib/supabase.js"></script>
-<script src="data.js?v=35"></script>
-<script src="lib/planning.js?v=35"></script>
+<script src="data.js?v=36"></script>
+<script src="lib/planning.js?v=36"></script>
 <script>
 {
 /* ---------- Référentiel ---------- */
@@ -565,8 +565,14 @@ const RDVST={'':'À contacter',propose:'Proposé',confirme:'Confirmé',reporter:
 const RDVC={'':'#8a8f98',propose:'#e08a00',confirme:'#2e9e5b',reporter:'#d6331f'};
 const CREN={j:'Journée',m:'Matin',a:'Après-midi'};
 const rdvOf=(id,ph)=>(((attrs(id).rdv)||{})[ph])||{};
-async function setRdv(id,ph,patch){const cur={...(attrs(id).rdv||{})};const r={...(cur[ph]||{}),...patch,by:prof.label,at:new Date().toISOString()};const h=(r.h||[]).slice(-9);h.push({st:r.st||'',d:r.d||'',cr:r.cr||'',by:r.by,at:r.at});r.h=h;cur[ph]=r;await saveAttrs(id,{rdv:cur})}
+async function setRdv(id,ph,patch){const cur={...(attrs(id).rdv||{})};const o=cur[ph]||{};if(Object.keys(patch).every(k=>(o[k]||'')===(patch[k]||'')))return;const r={...(cur[ph]||{}),...patch,by:prof.label,at:new Date().toISOString()};const h=(r.h||[]).slice(-49);h.push({st:r.st||'',d:r.d||'',cr:r.cr||'',pr:r.pr||'',n:r.n||'',by:r.by,at:r.at});r.h=h;cur[ph]=r;await saveAttrs(id,{rdv:cur})}
 const addDays=(iso,n)=>TP.numToIso(TP.isoToNum(iso)+n);
+function rvHistTable(list,withId){const prev={};const asc=[...list].sort((a,b)=>String(a.at).localeCompare(String(b.at)));const desc=new Map();
+ for(const e of asc){const p=prev[e.id];const ch=[];const k=e.d?fdl({d:e.d})+(e.cr&&e.cr!=='j'?' '+CREN[e.cr].toLowerCase():''):'';
+  if(!p||p.st!==e.st)ch.push('Statut : '+RDVST[e.st||'']);if((!p&&e.d)||(p&&(p.d!==e.d||p.cr!==e.cr)))ch.push(e.d?'RDV le '+k:'date effacée');
+  if(p&&(p.pr||'')!==(e.pr||''))ch.push(({present:'Locataire présent',cles:'Clés remises'}[e.pr])||'présence effacée');if(p&&(p.n||'')!==(e.n||''))ch.push(e.n?'Note : « '+e.n+' »':'note effacée');
+  desc.set(e,ch.length?ch.join(' · '):'Mise à jour');prev[e.id]=e}
+ return `<div class="scroll"><table class="stack"><thead><tr><th>Date</th>${withId?'<th>Logement</th>':''}<th>Modification</th><th>Par</th></tr></thead><tbody>${list.map(e=>`<tr><td>${fmtD(e.at)}</td>${withId?`<td><b>${esc(e.id)}</b></td>`:''}<td><span class="pd2" style="background:${RDVC[e.st||'']}"></span>${esc(desc.get(e))}</td><td>${esc(e.by||'')}</td></tr>`).join('')}</tbody></table></div>`}
 function vRdv(){
  const P=planComp();const adm=prof.role==='admin';const ph=S.rvP||'P1',tw=S.rvT||'',per=S.rvPer||'all',fs=S.rvS||'';const T=todayIso();
  let rows=[];for(const t of ['D','C','B','A']){if(tw&&t!==tw)continue;const L=P.L[ph+'|'+t];if(!L)continue;for(const x of L.list){const r=rdvOf(x.id,ph);rows.push({id:x.id,x,r,st:r.st||'',lim:addDays(x.s.d,-15)})}}
@@ -580,7 +586,7 @@ function vRdv(){
   <td>${adm?`<input type="date" data-rvd="${id}" value="${esc(r.d||'')}" style="width:150px;padding:6px"> <select class="f" data-rvc="${id}" style="width:auto;padding:6px">${Object.entries(CREN).map(([k,l])=>`<option value="${k}" ${(r.cr||'j')===k?'selected':''}>${l}</option>`).join('')}</select>`:(r.d?fdl({d:r.d})+' · '+(CREN[r.cr||'j']):'—')}${ecart?`<br><span class="tw" style="color:#b3001b">≠ planning (${fd(x.s)})</span>`:''}</td>
   <td><div class="btns">${Object.entries(RDVST).map(([k,l])=>`<button class="btn rvb ${st===k?'on':''}" ${adm?'':'disabled'} data-rvs="${id}|${k}" style="${st===k?`background:${RDVC[k]};border-color:${RDVC[k]};color:#fff`:''}">${l}</button>`).join('')}</div></td>
   <td>${adm?`<select class="f" data-rvp="${id}" style="width:auto;padding:6px"><option value="">—</option><option value="present" ${r.pr==='present'?'selected':''}>Locataire présent</option><option value="cles" ${r.pr==='cles'?'selected':''}>Clés remises</option></select>`:({present:'Locataire présent',cles:'Clés remises'}[r.pr]||'—')}</td>
-  <td>${adm?`<input type="text" data-rvn="${id}" value="${esc(r.n||'')}" placeholder="Note" style="min-width:140px;padding:6px">`:esc(r.n||'')}${r.at?`<br><span class="tw">${esc(r.by||'')} · ${fmtD(r.at)}</span>`:''}</td></tr>`}).join('');
+  <td>${adm?`<input type="text" data-rvn="${id}" value="${esc(r.n||'')}" placeholder="Note" style="min-width:140px;padding:6px">`:esc(r.n||'')}${r.at?`<br><span class="tw">${esc(r.by||'')} · ${fmtD(r.at)}</span>`:''}${(r.h||[]).length?`<br><button class="btn rvb" data-rvh="${id}" aria-expanded="${S.rvH===id}">Historique (${r.h.length}) ${S.rvH===id?'▾':'▸'}</button>`:''}</td></tr>${S.rvH===id?`<tr class="rvhist"><td colspan="7">${rvHistTable((r.h||[]).map(e=>({id,...e})).reverse(),false)}</td></tr>`:''}`}).join('');
  return `<div class="card"><h2>Rendez-vous locataires</h2>
  <div class="bar seg">${PH.map(p=>`<button class="chip" data-rvph="${p}" aria-pressed="${p===ph}">${esc(PHN[p])}</button>`).join('')}</div>
  <div class="bar"><div class="seg">${['','D','C','B','A'].map(t=>`<button class="chip" data-rvt="${t}" aria-pressed="${t===tw}">${t?'Tour '+t:'Toutes'}</button>`).join('')}</div>
@@ -588,7 +594,8 @@ function vRdv(){
  <select class="f" id="rvS" style="width:auto"><option value="">Tous les statuts</option><option value="non" ${fs==='non'?'selected':''}>Non confirmés</option>${Object.entries(RDVST).map(([k,l])=>`<option value="${k}" ${fs===k&&fs!==''?'selected':''}>${l}</option>`).join('')}</select></div>
  <div class="kpi" style="margin-bottom:10px">${Object.entries(RDVST).map(([k,l])=>`<div style="border-left:6px solid ${RDVC[k]}"><span class="mute">${l}</span><b>${cnt(k)}</b></div>`).join('')}<div style="border-left:6px solid #7a0010"><span class="mute">À prévenir en urgence</span><b>${urg}</b></div></div>
  <p class="note">« Contacter avant » = 15 jours avant le passage prévu (CCTP 00.4.9). En rouge : délai dépassé sans rendez-vous confirmé. Un rendez-vous confirmé sans date reprend la date du planning. <b>Un rendez-vous confirmé fixe la date du logement dans le planning</b> : l’équipe y est réservée et les autres logements s’enchaînent avant et après, sans chevauchement. Repasser le statut à « À reprogrammer » rend le logement au planning normal.${adm?'':' Consultation seule : la prise de rendez-vous est gérée par GBMP.'}</p>
- <div class="scroll"><table class="stack rvt"><thead><tr><th>Logement</th><th>Prévu au planning</th><th>Contacter avant</th><th>Rendez-vous</th><th>Statut</th><th>Présence</th><th>Note</th></tr></thead><tbody>${tr||'<tr><td colspan="7">Aucun logement sur cette sélection.</td></tr>'}</tbody></table></div></div>`;
+ <div class="scroll"><table class="stack rvt"><thead><tr><th>Logement</th><th>Prévu au planning</th><th>Contacter avant</th><th>Rendez-vous</th><th>Statut</th><th>Présence</th><th>Note</th></tr></thead><tbody>${tr||'<tr><td colspan="7">Aucun logement sur cette sélection.</td></tr>'}</tbody></table></div></div>
+ <div class="card" style="margin-top:14px"><h2>Historique des rendez-vous · ${esc(PHN[ph])}</h2><p class="mute">Toutes les modifications, de la plus récente à la plus ancienne${tw?' · tour '+tw:''}.</p>${(()=>{const all=[];for(const z of Object.values(Z)){if(z.kind!=='LOG'||(tw&&z.tower!==tw))continue;for(const e of (rdvOf(z.id,ph).h||[]))all.push({id:z.id,...e})}all.sort((a,b)=>String(b.at).localeCompare(String(a.at)));const n=S.rvHN||50;return all.length?rvHistTable(all.slice(0,n),true)+(all.length>n?`<button class="btn" id="rvHMore" style="margin-top:8px">Afficher plus</button>`:''):'<p class="mute">Aucune modification enregistrée pour l’instant.</p>'})()}</div>`;
 }
 const AMOPT=[['S','sols','Sol'],['V','murs','Paroi verticale'],['P','plafond','Plafond']];
 const totW=ts=>ts.filter(t=>!t.sdb).reduce((a,t)=>a+(+t.w||0),0),totS=ts=>ts.filter(t=>t.sdb).reduce((a,t)=>a+(+t.w||0),0);
@@ -769,6 +776,8 @@ document.addEventListener('click',async e=>{
  if(b.id==='plToday'){planScrollToday();return}
  if(b.dataset.rvph){S.rvP=b.dataset.rvph;render();return}
  if(b.dataset.rvt!==undefined){S.rvT=b.dataset.rvt;render();return}
+ if(b.dataset.rvh){S.rvH=S.rvH===b.dataset.rvh?null:b.dataset.rvh;render();return}
+ if(b.id==='rvHMore'){S.rvHN=(S.rvHN||50)+50;render();return}
  if(b.dataset.rvs){const [id,st]=b.dataset.rvs.split('|');const ph=S.rvP||'P1';const r=rdvOf(id,ph);const patch={st};if(st==='confirme'&&!r.d){const x=(planComp().byLog[id]||{})[ph];if(x){patch.d=x.s.d;patch.cr=x.s.pm?'a':'j'}}await setRdv(id,ph,patch);toast(id+' : '+RDVST[st]);return}
  if(b.dataset.amt!==undefined){S.amT=b.dataset.amt;render();return}
  if(b.dataset.plw!==undefined){const d=+b.dataset.plw;if(d===0){S.plW0=null}else{S.plW0=(S.plW0||0)+d*7*(S.plNW||3)}render();return}
